@@ -11,5 +11,5 @@ root.render(
     <div className="wrapper">
       <App />
     </div>
-  </StrictMode>
+  </StrictMode>,
 );

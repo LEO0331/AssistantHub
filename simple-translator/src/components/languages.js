@@ -32,7 +32,7 @@ const LANGUAGES = [
   { label: "Simplified Chinese", value: "zh-CN" },
   { label: "Spanish", value: "es" },
   { label: "Swahili", value: "sw" },
-  { label: "Thai", value: "th" }
+  { label: "Thai", value: "th" },
 ];
 
 export default Languages;

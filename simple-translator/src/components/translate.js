@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+const key = "yout_key";
 
 function Translate({ language, text }) {
   const [translated] = useTranslation(text, language);
@@ -52,19 +53,19 @@ const doTranslation = debounce(
   async (input, languageCode, cancelToken, callback) => {
     try {
       const { data } = await axios.post(
-        "https://translation.googleapis.com/language/translate/v2?key=AIzaSyCf0Xy0OnhxlduyEt3K8zP-sOuu-l_u6uA",
+        `https://translation.googleapis.com/language/translate/v2?key=${key}`,
         {
           q: input,
-          target: languageCode
+          target: languageCode,
         },
-        { cancelToken: cancelToken.token }
+        { cancelToken: cancelToken.token },
       );
 
       callback(data.data.translations[0].translatedText);
     } catch (err) {
       callback("");
     }
-  }
+  },
 );
 
 export default Translate;

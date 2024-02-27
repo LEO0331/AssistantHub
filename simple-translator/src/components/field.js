@@ -4,10 +4,12 @@ import Flower from "./svg/flower";
 function Field({ value, onChange }) {
   return (
     <div className="field">
-      <Flower className="flower-right" fill="rgb(110, 146, 119)" />
-      <Flower className="flower-left" fill="rgb(249, 148, 59)" />
+      <Flower className="flower-right" fill="orange" />
+      <Flower className="flower-left" fill="yellow" />
+      <Flower className="flower-btnright" fill="orange" />
+      <Flower className="flower-btnleft" fill="yellow" />
       <h1>Translate App</h1>
-      <label>Enter English</label>
+      <label>Please Enter English</label>
       <input
         className="input"
         value={value}
