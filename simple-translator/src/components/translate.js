@@ -4,31 +4,31 @@ import axios from "axios";
 
 function Translate({ language, text }) {
   let url =
-    'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' +
-    'en' +
-    '&tl=' +
+    "https://translate.googleapis.com/translate_a/single?client=gtx&sl=" +
+    "en" +
+    "&tl=" +
     language +
-    '&dt=t&q=' +
+    "&dt=t&q=" +
     encodeURI(text);
-    const [resultText, setResultText] = useState('');
-    useEffect(() => {
-      if (!text) {
-        setResultText('');
-        return;
+  const [resultText, setResultText] = useState("");
+  useEffect(() => {
+    if (!text) {
+      setResultText("");
+      return;
+    }
+    const fetchData = async () => {
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        setResultText(data[0][0][0]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
-      const fetchData = async () => {
-        try {
-          const response = await fetch(url);
-          const data = await response.json();
-          setResultText(data[0][0][0]);
-        } catch (error) {
-          console.error('Error fetching data:', error);
-        }
-      };
+    };
 
-      fetchData();
-    }, [text, language]);
-  
+    fetchData();
+  }, [text, language]);
+
   // console.log(resultText)
 
   return (
