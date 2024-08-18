@@ -15,7 +15,7 @@ This React application allows users to dynamically fetch and display profile car
 - **React**: Front-end library for building the user interface.
 - **Axios**: Promise-based HTTP client for making API requests.
 - **CSS**: For styling the components and layout.
-- **RandomUser API**: Provides random user data.
+- **RandomUser API**: Provides random user data from [random user api](https://randomuser.me/).
 
 ## Installation
 

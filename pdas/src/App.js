@@ -54,10 +54,10 @@ function App() {
       </div>
       <div className="container"> 
         <section className="section">
-            <div className="columns is-desktop">
+            <div className="columns is-multiline">
             {users.length > 0 ? (
-            users.map((user, index) => (
-              <div className="column" key={index}>
+            users.map((user, index) => ( 
+              <div className="column is-half" key={index}>
                 <ProfileCards
                   name={`${user.name.first} ${user.name.last}`}
                   email={user.email}
