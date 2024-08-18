@@ -1,3 +1,4 @@
+import 'bulma/css/bulma.css';
 import ProfileCards from "./ProfileCards";
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -31,13 +32,18 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <div className="header">
-        <h1>Digital Assistants</h1>
-      </div>
+    <div>
+      <section className="hero is-link">
+        <div className="hero-body">
+            <p className="title">Assistants</p>
+            <p className="subtitle">Welcome to Virtual Assistants!</p>
+        </div>
+      </section>
+      <br />
       <div>
-        <label htmlFor="numCards">Please enter numbers of profile cards you would like to generate (Max 10): </label>
+        <label htmlFor="numCards" className="tag is-info is-large">Find your next incredible assistant(s): </label>
         <input
+          className="input is-info"
           type="number"
           id="numCards"
           value={numberOfCards}
@@ -46,19 +52,28 @@ function App() {
           max="10"
         />
       </div>
-      <div>
-        {users.length > 0 ? (
-          users.map((user, index) => (
-            <ProfileCards
-              key={index} // Unique key for each element
-              name={`${user.name.first} ${user.name.last}`}
-              email={user.email}
-              phone={user.phone}
-            />
-          ))
-        ) : (
-          <p>No profile cards to display</p>
-        )}
+      <div className="container"> 
+        <section className="section">
+            <div className="columns is-desktop">
+            {users.length > 0 ? (
+            users.map((user, index) => (
+              <div className="column" key={index}>
+                <ProfileCards
+                  name={`${user.name.first} ${user.name.last}`}
+                  email={user.email}
+                  phone={user.phone}
+                  imageUrl={user.picture.large}
+                  cell={user.cell}
+                  description={user.location.timezone.description}
+                  id={user.id.name}
+                />
+              </div>
+            ))
+          ) : (
+            <p>No profile cards to display</p>
+          )}
+            </div>
+        </section>
       </div>
     </div>
   );
