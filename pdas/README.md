@@ -19,18 +19,16 @@ This React application allows users to dynamically fetch and display profile car
 
 ## Installation
 
-1. **Clone the repository**
-2. **Navigate to the project directory**
-3. **Install dependencies and Start the development server**
+1. **Clone the repository and Navigate to the project directory**
+2. **Install dependencies and Start the development server**
     - `npm install` and `npm start`
     - The application will be available at http://localhost:3000
 
 ## Usage
 - Input Field: Enter a number between 0 and 10 in the input field to specify how many profile cards you want to display.
 - Profile Cards Display: The profile cards will automatically update based on the number entered.
-- ![Alt text](http://full/path/to/img.jpg)
+- ![Demo website](https://github.com/LEO0331/side-projects-demo/blob/main/pdas/public/Screenshot%202024-08-18%20at%2011.13.05%E2%80%AFPM.png)
 
 ## Components
 - ProfileCards: Displays individual user profile information including name, email, phone, image, cell, description, and ID.
 - App: Manages the state for the number of cards, handles input changes, fetches user data from the API, and renders the profile cards.
-
