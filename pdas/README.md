@@ -27,7 +27,8 @@ This React application allows users to dynamically fetch and display profile car
 ## Usage
 - Input Field: Enter a number between 0 and 10 in the input field to specify how many profile cards you want to display.
 - Profile Cards Display: The profile cards will automatically update based on the number entered.
-- ![Demo website](https://github.com/LEO0331/side-projects-demo/blob/main/pdas/public/Screenshot%202024-08-18%20at%2011.13.05%E2%80%AFPM.png)
+
+![Demo website](https://github.com/LEO0331/side-projects-demo/blob/main/pdas/public/Screenshot%202024-08-18%20at%2011.13.05%E2%80%AFPM.png)
 
 ## Components
 - ProfileCards: Displays individual user profile information including name, email, phone, image, cell, description, and ID.
