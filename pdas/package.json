@@ -1,7 +1,7 @@
 {
   "name": "pdas",
   "version": "0.1.0",
-  "homepage": "https://leo0331.github.io/side-projects-demo/pdas/",
+  "homepage": "https://leo0331.github.io/side-projects-demo/",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
