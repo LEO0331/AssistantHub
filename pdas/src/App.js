@@ -1,4 +1,5 @@
 import 'bulma/css/bulma.css';
+import '@fortawesome/fontawesome-free/css/all.min.css';
 import ProfileCards from './ProfileCards';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -31,6 +32,18 @@ function App() {
     fetchUsers(num); // Fetch new users when the number changes
   };
 
+  const handleAddCard = () => {
+    if (numberOfCards < 10) {
+      setNumberOfCards(numberOfCards + 1);
+    }
+  };
+
+  const handleMinusCard = () => {
+    if (numberOfCards > 0) {
+      setNumberOfCards(numberOfCards - 1);
+    }
+  };
+
   return (
     <div>
       <section className="hero is-link">
@@ -40,19 +53,37 @@ function App() {
         </div>
       </section>
       <br />
-      <div>
-        <label htmlFor="numCards" className="tag is-info is-large">
-          Find your next incredible assistant(s):
-        </label>
-        <input
-          className="input is-info"
-          type="number"
-          id="numCards"
-          value={numberOfCards}
-          onChange={handleInputChange}
-          min="0"
-          max="10"
-        />
+      <div className="field is-grouped">
+        <div className="control">
+          <label htmlFor="numCards" className="tag is-info is-large">
+            Find your next incredible assistant(s):
+          </label>
+        </div>
+        <div className="control is-expanded">
+          <input
+            className="input is-info"
+            type="number"
+            id="numCards"
+            value={numberOfCards}
+            onChange={handleInputChange}
+            min="0"
+            max="10"
+          />
+        </div>
+        <div className="control">
+          <button className="button is-info is-light" onClick={handleAddCard} style={{ marginRight: '0.5rem' }}>
+            <span className="icon">
+              <i className="fas fa-plus"></i>
+            </span>
+            <span>Plus</span>
+          </button>
+          <button className="button is-danger is-light" onClick={handleMinusCard}>
+            <span className="icon">
+              <i className="fas fa-minus"></i>
+            </span>
+            <span>Minus</span>
+          </button>
+        </div>
       </div>
       <div className="container">
         <section className="section">
@@ -63,7 +94,6 @@ function App() {
                   <ProfileCards
                     name={`${user.name.first} ${user.name.last}`}
                     email={user.email}
-                    phone={user.phone}
                     imageUrl={user.picture.large}
                     cell={user.cell}
                     description={user.location.timezone.description}

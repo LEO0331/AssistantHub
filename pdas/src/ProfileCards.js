@@ -1,5 +1,5 @@
 function ProfileCards(props) {
-    const {name, email, phone, imageUrl, cell, description, id} = props;
+    const {name, email, imageUrl, cell, description, id} = props;
     return(
       <div className="card">
         <div className="card-content">
@@ -12,7 +12,6 @@ function ProfileCards(props) {
             <div className="media-content">
               <p className="title is-2">{name}</p>
               <p className="subtitle is-4">{`@${id}`}</p>
-              <p className="subtitle is-4">{phone}</p>
             </div>
           </div>
       
