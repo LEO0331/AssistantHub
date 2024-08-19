@@ -22,7 +22,8 @@ This React application allows users to dynamically fetch and display profile car
 1. **Clone the repository and Navigate to the project directory**
 2. **Install dependencies and Start the development server**
     - `npm install` and `npm start`
-    - The application will be available at http://localhost:3000
+    - The application will be available at http://localhost:3000 or http://localhost:3000/side-projects-demo
+    - The application is deployed at https://leo0331.github.io/side-projects-demo/
 
 ## Usage
 - Input Field: Enter a number between 0 and 10 in the input field to specify how many profile cards you want to display.
