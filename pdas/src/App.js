@@ -7,16 +7,19 @@ import axios from 'axios';
 function App() {
   const [users, setUsers] = useState([]);
   const [numberOfCards, setNumberOfCards] = useState(1); // Default to 1 card
+  const [likes, setLikes] = useState([]); // Array to keep track of likes for each card
 
   // Fetch random users based on the number of cards
   const fetchUsers = async (num) => {
     if (num === 0) {
       setUsers([]); // Clear the users array if input is 0
+      setLikes([]); // Clear likes array
       return;
     }
     try {
       const response = await axios.get(`https://randomuser.me/api/?results=${num}`);
       setUsers(response.data.results);
+      setLikes(new Array(num).fill(0)); // Initialize likes array with zeros
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -44,6 +47,12 @@ function App() {
     }
   };
 
+  const handleLikeClick = (index) => {
+    const newLikes = [...likes];
+    newLikes[index] += 1;
+    setLikes(newLikes);
+  };
+
   return (
     <div>
       <section className="hero is-link">
@@ -54,9 +63,9 @@ function App() {
       </section>
       <br />
       <div className="field is-grouped">
-        <div className="control">
+        <div className="control" style={{ marginLeft: '0.5rem' }}>
           <label htmlFor="numCards" className="tag is-info is-large">
-            Find your next incredible assistant(s):
+            Find your next incredible assistants
           </label>
         </div>
         <div className="control is-expanded">
@@ -70,7 +79,7 @@ function App() {
             max="10"
           />
         </div>
-        <div className="control">
+        <div className="control" style={{ marginRight: '0.5rem' }}>
           <button className="button is-info is-light" onClick={handleAddCard} style={{ marginRight: '0.5rem' }}>
             <span className="icon">
               <i className="fas fa-plus"></i>
@@ -98,6 +107,8 @@ function App() {
                     cell={user.cell}
                     description={user.location.timezone.description}
                     id={user.id.name}
+                    likes={likes[index]}
+                    onLikeClick={() => handleLikeClick(index)}
                   />
                 </div>
               ))
