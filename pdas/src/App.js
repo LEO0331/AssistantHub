@@ -10,6 +10,7 @@ function App() {
   const [numberOfCards, setNumberOfCards] = useState(1); // Default to 1 card
   const [likes, setLikes] = useState([]); // Array to keep track of likes for each card
   const [searchTerm, setSearchTerm] = useState(''); // State for search term
+  const [sortOrder, setSortOrder] = useState('highToLow'); // Default sort order
 
   // Fetch random users based on the number of cards
   const fetchUsers = async (num) => {
@@ -63,6 +64,16 @@ function App() {
     `${user.name.first} ${user.name.last}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleSortChange = (e) => {
+    setSortOrder(e.target.value);
+  };
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const likeA = likes[users.indexOf(a)];
+    const likeB = likes[users.indexOf(b)];
+    return sortOrder === 'highToLow' ? likeB - likeA : likeA - likeB;
+  });
+
   return (
     <div>
       <section className="hero is-link">
@@ -89,7 +100,7 @@ function App() {
             max="10"
           />
         </div>
-        <div className="control" style={{ marginRight: '0.5rem' }}>
+        <div className="control">
           <button className="button is-info is-light" onClick={handleAddCard} style={{ marginRight: '0.5rem' }}>
             <span className="icon">
               <i className="fas fa-plus"></i>
@@ -101,16 +112,21 @@ function App() {
             </span>
           </button>
         </div>
-        <div className="control" style={{ marginRight: '0.5rem' }}>
+        <div className="control">
           <SearchBar value={searchTerm} onChange={handleSearchChange} />
         </div>
+        <div className="control select is-info" style={{ marginRight: '0.5rem' }}>
+          <select value={sortOrder} onChange={handleSortChange}>
+              <option value="highToLow">Likes: High to Low</option>
+              <option value="lowToHigh">Likes: Low to High</option>
+          </select>
+        </div>
       </div>
-      
       <div className="container">
         <section className="section">
           <div className="columns is-multiline">
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((user, index) => (
+            {sortedUsers.length > 0 ? (
+              sortedUsers.map((user, index) => (
                 <div className="column is-half" key={index}>
                   <ProfileCards
                     name={`${user.name.first} ${user.name.last}`}
@@ -119,8 +135,8 @@ function App() {
                     cell={user.cell}
                     description={user.location.timezone.description}
                     id={user.id.name}
-                    likes={likes[index]}
-                    onLikeClick={() => handleLikeClick(index)}
+                    likes={likes[users.indexOf(user)]}
+                    onLikeClick={() => handleLikeClick(users.indexOf(user))}
                   />
                 </div>
               ))
