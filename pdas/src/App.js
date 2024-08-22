@@ -4,6 +4,7 @@ import ProfileCards from './ProfileCards';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import SearchBar from './SearchBar';
+import { CSVLink } from "react-csv";
 
 function App() {
   const [users, setUsers] = useState([]);
@@ -11,18 +12,22 @@ function App() {
   const [likes, setLikes] = useState([]); // Array to keep track of likes for each card
   const [searchTerm, setSearchTerm] = useState(''); // State for search term
   const [sortOrder, setSortOrder] = useState('highToLow'); // Default sort order
+  const [addedUsers, setAddedUsers] = useState([]); // Array to store added users
+  const [disabledButtons, setDisabledButtons] = useState([]); // Array to track disabled buttons
 
   // Fetch random users based on the number of cards
   const fetchUsers = async (num) => {
     if (num === 0) {
       setUsers([]); // Clear the users array if input is 0
       setLikes([]); // Clear likes array
+      setDisabledButtons([]); // Clear disabled buttons array
       return;
     }
     try {
       const response = await axios.get(`https://randomuser.me/api/?results=${num}`);
       setUsers(response.data.results);
       setLikes(new Array(num).fill(0)); // Initialize likes array with zeros
+      setDisabledButtons(new Array(num).fill(false)); // Initialize all buttons as enabled
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -74,19 +79,34 @@ function App() {
     return sortOrder === 'highToLow' ? likeB - likeA : likeA - likeB;
   });
 
+  const handleAddUser = (user, index) => {
+    const newDisabledButtons = [...disabledButtons];
+    newDisabledButtons[index] = true; // Disable the button after clicking
+    setDisabledButtons(newDisabledButtons);
+
+    const newUser = {
+      name: `${user.name.first} ${user.name.last}`,
+      email: user.email,
+      cell: user.cell
+    };
+
+    setAddedUsers([...addedUsers, newUser]);
+  };
+
   return (
     <div>
       <section className="hero is-link">
         <div className="hero-body">
-          <p className="title">Assistants</p>
+          <p className="title">Assistants Finder</p>
           <p className="subtitle">Welcome to Virtual Assistants!</p>
+          <p className="subtitle">todo: caching</p>
         </div>
       </section>
       <br />
       <div className="field is-grouped">
         <div className="control" style={{ marginLeft: '0.5rem' }}>
           <label htmlFor="numCards" className="tag is-info is-large">
-            Find your next incredible assistants
+            Find Incredible Assistants
           </label>
         </div>
         <div className="control is-expanded">
@@ -115,11 +135,20 @@ function App() {
         <div className="control">
           <SearchBar value={searchTerm} onChange={handleSearchChange} />
         </div>
-        <div className="control select is-info" style={{ marginRight: '0.5rem' }}>
+        <div className="control select is-info">
           <select value={sortOrder} onChange={handleSortChange}>
               <option value="highToLow">Likes: High to Low</option>
               <option value="lowToHigh">Likes: Low to High</option>
           </select>
+        </div>
+        <div className="control" style={{ marginRight: '0.5rem' }}>
+          <CSVLink
+            data={addedUsers}
+            filename={"added_users.csv"}
+            className="button is-info"
+          >
+            Export to CSV
+          </CSVLink>
         </div>
       </div>
       <div className="container">
@@ -137,6 +166,8 @@ function App() {
                     id={user.id.name}
                     likes={likes[users.indexOf(user)]}
                     onLikeClick={() => handleLikeClick(users.indexOf(user))}
+                    onAddClick={() => handleAddUser(user, index)}
+                    disabled={disabledButtons[index]}
                   />
                 </div>
               ))
