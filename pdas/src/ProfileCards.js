@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable react/react-in-jsx-scope */
 function ProfileCards(props) {
-    const {name, email, imageUrl, cell, description, id, likes, onLikeClick, onAddClick, disabled} = props;
+    const {name, email, imageUrl, cell, description, id, likes, onLikeClick, onAddClick, isAdded} = props;
 
     return(
       <div className="card">
@@ -33,9 +33,9 @@ function ProfileCards(props) {
           <button
             className="button is-link card-footer-item"
             onClick={onAddClick}
-            disabled={disabled}
+            disabled={isAdded}
           >
-            {disabled ? 'Added' : 'Add'}
+            {isAdded ? 'Added' : 'Add'}
           </button>
         </footer>
       </div>

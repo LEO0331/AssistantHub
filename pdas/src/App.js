@@ -13,21 +13,20 @@ function App() {
   const [searchTerm, setSearchTerm] = useState(''); // State for search term
   const [sortOrder, setSortOrder] = useState('highToLow'); // Default sort order
   const [addedUsers, setAddedUsers] = useState([]); // Array to store added users
-  const [disabledButtons, setDisabledButtons] = useState([]); // Array to track disabled buttons
+
 
   // Fetch random users based on the number of cards
   const fetchUsers = async (num) => {
     if (num === 0) {
       setUsers([]); // Clear the users array if input is 0
       setLikes([]); // Clear likes array
-      setDisabledButtons([]); // Clear disabled buttons array
+      setAddedUsers([]); // Clear added users array
       return;
     }
     try {
       const response = await axios.get(`https://randomuser.me/api/?results=${num}`);
       setUsers(response.data.results);
       setLikes(new Array(num).fill(0)); // Initialize likes array with zeros
-      setDisabledButtons(new Array(num).fill(false)); // Initialize all buttons as enabled
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -79,18 +78,17 @@ function App() {
     return sortOrder === 'highToLow' ? likeB - likeA : likeA - likeB;
   });
 
-  const handleAddUser = (user, index) => {
-    const newDisabledButtons = [...disabledButtons];
-    newDisabledButtons[index] = true; // Disable the button after clicking
-    setDisabledButtons(newDisabledButtons);
+  const handleAddUser = (user) => {
+    const userIdentifier = user.email; // Using email as a unique identifier
+    if (!addedUsers.some((u) => u.email === userIdentifier)) {
+      const newUser = {
+        name: `${user.name.first} ${user.name.last}`,
+        email: user.email,
+        cell: user.cell,
+      };
 
-    const newUser = {
-      name: `${user.name.first} ${user.name.last}`,
-      email: user.email,
-      cell: user.cell
-    };
-
-    setAddedUsers([...addedUsers, newUser]);
+      setAddedUsers([...addedUsers, newUser]);
+    }
   };
 
   return (
@@ -166,8 +164,8 @@ function App() {
                     id={user.id.name}
                     likes={likes[users.indexOf(user)]}
                     onLikeClick={() => handleLikeClick(users.indexOf(user))}
-                    onAddClick={() => handleAddUser(user, index)}
-                    disabled={disabledButtons[index]}
+                    onAddClick={() => handleAddUser(user)}
+                    isAdded={addedUsers.some((u) => u.email === user.email)}
                   />
                 </div>
               ))
