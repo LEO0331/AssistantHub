@@ -13,7 +13,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState(''); // State for search term
   const [sortOrder, setSortOrder] = useState('highToLow'); // Default sort order
   const [addedUsers, setAddedUsers] = useState([]); // Array to store added users
-
+  const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
 
   // Fetch random users based on the number of cards
   const fetchUsers = async (num) => {
@@ -85,24 +85,33 @@ function App() {
         name: `${user.name.first} ${user.name.last}`,
         email: user.email,
         cell: user.cell,
+        country: user.location.country,
       };
 
       setAddedUsers([...addedUsers, newUser]);
     }
   };
 
+  const handleViewAddedUsers = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
   return (
     <div>
       <section className="hero is-link">
         <div className="hero-body">
-          <p className="title">Assistants Finder</p>
-          <p className="subtitle">Welcome to Virtual Assistants!</p>
-          <p className="subtitle">todo: caching</p>
+          <p className="title">AssistantHub</p>
+          <p className="subtitle">Your next personal Assistants!</p>
+          <p className="subtitle">todo: caching, easy chatbot</p>
         </div>
       </section>
       <br />
       <div className="field is-grouped">
-        <div className="control" style={{ marginLeft: '0.5rem' }}>
+        <div className="control ml-1">
           <label htmlFor="numCards" className="tag is-info is-large">
             Find Incredible Assistants
           </label>
@@ -119,7 +128,7 @@ function App() {
           />
         </div>
         <div className="control">
-          <button className="button is-info is-light" onClick={handleAddCard} style={{ marginRight: '0.5rem' }}>
+          <button className="button is-info is-light mr-1" onClick={handleAddCard}>
             <span className="icon">
               <i className="fas fa-plus"></i>
             </span>
@@ -139,7 +148,12 @@ function App() {
               <option value="lowToHigh">Likes: Low to High</option>
           </select>
         </div>
-        <div className="control" style={{ marginRight: '0.5rem' }}>
+        <div className="control">
+          <button className="button is-primary" onClick={handleViewAddedUsers}>
+            View Added Info
+          </button>
+        </div>
+        <div className="control mr-1">
           <CSVLink
             data={addedUsers}
             filename={"added_users.csv"}
@@ -160,7 +174,7 @@ function App() {
                     email={user.email}
                     imageUrl={user.picture.large}
                     cell={user.cell}
-                    description={user.location.timezone.description}
+                    country={user.location.country}
                     id={user.id.name}
                     likes={likes[users.indexOf(user)]}
                     onLikeClick={() => handleLikeClick(users.indexOf(user))}
@@ -175,6 +189,26 @@ function App() {
           </div>
         </section>
       </div>
+
+      {isModalOpen && (
+        <div className="modal is-active">
+          <div className="modal-background"></div>
+          <div className="modal-content">
+            <div className="box">
+              <h2 className="title">Added Assistants</h2>
+              <div className="content">
+                {addedUsers.length > 0 ? addedUsers.map((user, index) => (
+                  <p key={index}>
+                    {user.name}, {user.email}, {user.cell}, {user.country}
+                  </p>
+                )) : <p>No assistant added yet.</p>}
+              </div>
+              <button className="button is-info" onClick={handleCloseModal}>Close</button>
+            </div>
+          </div>
+          <button className="modal-close is-large" aria-label="close" onClick={handleCloseModal}></button>
+        </div>
+      )}
     </div>
   );
 }

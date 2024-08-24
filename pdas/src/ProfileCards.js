@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable react/react-in-jsx-scope */
 function ProfileCards(props) {
-    const {name, email, imageUrl, cell, description, id, likes, onLikeClick, onAddClick, isAdded} = props;
+    const {name, email, imageUrl, cell, country, id, likes, onLikeClick, onAddClick, isAdded} = props;
 
     return(
       <div className="card">
@@ -25,8 +25,7 @@ function ProfileCards(props) {
           </div>
           <div className="content">
             Contact me at <strong>{email}</strong> or <strong>{cell}</strong> !
-            <br />
-            <div>{description}</div>  
+            <div>{country}</div>  
           </div>
         </div>
         <footer className="card-footer">
