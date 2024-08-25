@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable react/react-in-jsx-scope */
+import QRCode from 'react-qr-code';
 function ProfileCards(props) {
     const {name, email, imageUrl, cell, country, id, likes, onLikeClick, onAddClick, isAdded} = props;
 
@@ -13,7 +14,9 @@ function ProfileCards(props) {
               </figure>
             </div>
             <div className="media-content">
-              <p className="title is-2">{name}</p>
+              <p className="title is-2">
+                {name} <QRCode value={email} size={30} />
+              </p>
               <p className="subtitle is-4">{`@${id}`}</p>
               <p className="subtitle">
                 <span className="icon" onClick={onLikeClick}>
