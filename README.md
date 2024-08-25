@@ -4,12 +4,12 @@
 
 AssistantHub is a dynamic web application designed to help users discover and manage personal assistants. The app allows users to view and interact with profiles of various assistants, including their names, images, and contact details. Users can:
 
-- Search and Sort: Use the search bar to filter profiles based on names and sort them by likes or proximity to the current location.
-- Manage Cards: Add or remove assistant profiles to/from the view, with the number of profiles adjustable up to a maximum of 10.
-- Like Profiles: Show appreciation for profiles by liking them, which influences their sort order.
-- Add to Favorites: Save favorite assistants to a list, with the ability to export this list to a CSV file.
-- Send Inquiries: Contact assistants via an inquiry form and view all sent inquiries in a dedicated modal.
-- View Added Info: Access detailed information about saved assistants in a modal popup.
+- **Search and Sort**: Use the search bar to filter profiles based on names and sort them by likes or proximity to the current location.
+- **Manage Cards**: Add or remove assistant profiles to/from the view, with the number of profiles adjustable up to a maximum of 10.
+- **Like Profiles**: Show appreciation for profiles by liking them, which influences their sort order.
+- **Add to Favorites**: Save favorite assistants to a list, with the ability to export this list to a CSV file.
+- **Send Inquiries**: Contact assistants via an inquiry form and view all sent inquiries in a dedicated modal.
+- **View Added Info and Inquiries**: Access detailed information and sent inquiries about assistants in a modal popup.
 
 The app features interactive profile cards with QR codes, likes counters, and dynamic sorting based on user preferences and location proximity. It uses React for the frontend, integrating various components such as modals and buttons to enhance user experience and functionality.
 
@@ -38,7 +38,7 @@ The app features interactive profile cards with QR codes, likes counters, and dy
 - Input Field: Enter a number between 0 and 10 in the input field to specify how many profile cards you want to display.
 - Profile Cards Display: The profile cards will automatically update based on the number entered.
 
-![Demo website](https://github.com/LEO0331/AssistantHub/blob/main/AssistantHubpublic/Screenshot%202024-08-18%20at%2011.13.05%E2%80%AFPM.png)
+![Demo website Version 1](https://github.com/LEO0331/AssistantHub/blob/main/public/Screenshot%202024-08-18%20at%2011.13.05%E2%80%AFPM.png)
 
 ## Components
 - ProfileCards: Displays individual user profile information including name, email, phone, image, cell, description, and ID.

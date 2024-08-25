@@ -116,7 +116,7 @@ function App() {
         <div className="hero-body">
           <p className="title">AssistantHub</p>
           <p className="subtitle">Your next personal Assistants!</p>
-          <p className="subtitle">todo: caching, easy chatbot right down corner, sort by location near me, show map after click user location in a pop up, copy to clipboard in inquiry modal</p>
+          <p className="subtitle">todo: unit testing, caching, easy chatbot right down corner, sort by location near me, show map after click user location in a pop up, copy to clipboard in inquiry modal</p>
         </div>
       </section>
       <br />
