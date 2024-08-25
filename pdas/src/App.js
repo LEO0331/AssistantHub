@@ -175,7 +175,6 @@ function App() {
                     imageUrl={user.picture.large}
                     cell={user.cell}
                     country={user.location.country}
-                    id={user.id.name}
                     likes={likes[users.indexOf(user)]}
                     onLikeClick={() => handleLikeClick(users.indexOf(user))}
                     onAddClick={() => handleAddUser(user)}

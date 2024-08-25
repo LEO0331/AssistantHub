@@ -1,8 +1,22 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable react/react-in-jsx-scope */
+import ContactModal from './ContactModal'; 
 import QRCode from 'react-qr-code';
+import React, { useState } from 'react';
+
 function ProfileCards(props) {
-    const {name, email, imageUrl, cell, country, id, likes, onLikeClick, onAddClick, isAdded} = props;
+    const {name, email, imageUrl, cell, country, likes, onLikeClick, onAddClick, isAdded} = props;
+
+    // State to manage the modal visibility
+    const [isModalActive, setIsModalActive] = useState(false);
+
+    const handleNameClick = () => {
+      setIsModalActive(true);
+  };
+
+  const closeModal = () => {
+      setIsModalActive(false);
+  };
 
     return(
       <div className="card">
@@ -14,21 +28,25 @@ function ProfileCards(props) {
               </figure>
             </div>
             <div className="media-content">
-              <p className="title is-2">
-                {name} <QRCode value={email} size={30} />
+              <p className="title is-2" onClick={handleNameClick} style={{ cursor: 'pointer' }}>
+                {name}
               </p>
-              <p className="subtitle is-4">{`@${id}`}</p>
               <p className="subtitle">
-                <span className="icon" onClick={onLikeClick}>
+                <QRCode value={cell} size={30} />
+              </p>
+              <p className="title is-4" style={{ cursor: 'pointer' }}>
+                <span className="icon mr-1" onClick={onLikeClick}>
                   <i className="fa fa-thumbs-up" aria-hidden="true"></i> 
                 </span>
                 {likes} {likes === 0 ? 'Like' : likes === 1 ? 'Like' : 'Likes'}
+              </p>
+              <p className="subtitle">
+                {country}
               </p>
             </div>
           </div>
           <div className="content">
             Contact me at <strong>{email}</strong> or <strong>{cell}</strong> !
-            <div>{country}</div>  
           </div>
         </div>
         <footer className="card-footer">
@@ -40,6 +58,11 @@ function ProfileCards(props) {
             {isAdded ? 'Added' : 'Add'}
           </button>
         </footer>
+        <ContactModal
+          isActive={isModalActive}
+          onClose={closeModal}
+          user={{ name, email, cell }}
+        />
       </div>
     )
 }
