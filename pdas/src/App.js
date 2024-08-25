@@ -14,6 +14,8 @@ function App() {
   const [sortOrder, setSortOrder] = useState('highToLow'); // Default sort order
   const [addedUsers, setAddedUsers] = useState([]); // Array to store added users
   const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
+  const [sentInquiries, setSentInquiries] = useState([]);
+  const [isInquiryModalActive, setIsInquiryModalActive] = useState(false);
 
   // Fetch random users based on the number of cards
   const fetchUsers = async (num) => {
@@ -100,13 +102,21 @@ function App() {
     setIsModalOpen(false);
   };
 
+  const handleInquirySubmit = (inquiry) => {
+    setSentInquiries((prevInquiries) => [...prevInquiries, inquiry]);
+  };
+
+  const toggleInquiryModal = () => {
+    setIsInquiryModalActive(!isInquiryModalActive);
+  };
+
   return (
     <div>
       <section className="hero is-link">
         <div className="hero-body">
           <p className="title">AssistantHub</p>
           <p className="subtitle">Your next personal Assistants!</p>
-          <p className="subtitle">todo: caching, easy chatbot, sort by location near me, show map after click user location</p>
+          <p className="subtitle">todo: caching, easy chatbot right down corner, sort by location near me, show map after click user location in a pop up, copy to clipboard in inquiry modal</p>
         </div>
       </section>
       <br />
@@ -149,6 +159,11 @@ function App() {
           </select>
         </div>
         <div className="control">
+          <button className="button is-warning" onClick={toggleInquiryModal}>
+            View Inquiry Sent
+          </button>
+        </div>
+        <div className="control">
           <button className="button is-primary" onClick={handleViewAddedUsers}>
             View Added Info
           </button>
@@ -159,7 +174,7 @@ function App() {
             filename={"added_users.csv"}
             className="button is-info"
           >
-            Export to CSV
+            Export Added Info
           </CSVLink>
         </div>
       </div>
@@ -179,6 +194,7 @@ function App() {
                     onLikeClick={() => handleLikeClick(users.indexOf(user))}
                     onAddClick={() => handleAddUser(user)}
                     isAdded={addedUsers.some((u) => u.email === user.email)}
+                    onInquirySubmit={handleInquirySubmit}
                   />
                 </div>
               ))
@@ -200,14 +216,44 @@ function App() {
                   <p key={index}>
                     {user.name}, {user.email}, {user.cell}, {user.country}
                   </p>
-                )) : <p>No assistant added yet.</p>}
+                )) : <p>No assistant added.</p>}
               </div>
-              <button className="button is-info" onClick={handleCloseModal}>Close</button>
+              <button className="button" onClick={handleCloseModal}>Close</button>
             </div>
           </div>
           <button className="modal-close is-large" aria-label="close" onClick={handleCloseModal}></button>
         </div>
       )}
+
+      {/* Modal for viewing sent inquiries */}
+      {isInquiryModalActive && (
+        <div className={`modal ${isInquiryModalActive ? 'is-active' : ''}`}>
+          <div className="modal-background" onClick={toggleInquiryModal}></div>
+          <div className="modal-card">
+            <header className="modal-card-head">
+              <p className="modal-card-title">Sent Inquiries</p>
+              <button className="delete" aria-label="close" onClick={toggleInquiryModal}></button>
+            </header>
+            <section className="modal-card-body">
+              {sentInquiries.length > 0 ? (
+                sentInquiries.map((inquiry, index) => (
+                  <p key={index}>
+                    <strong>Name:</strong> {inquiry.name}, <strong>Email:</strong> {inquiry.email}, <strong>Mobile:</strong> {inquiry.cell}, <strong>Message:</strong> {inquiry.message}
+                  </p>
+                ))
+              ) : (
+                <p>No inquiries sent.</p>
+              )}
+            </section>
+            <footer className="modal-card-foot">
+              <button className="button" onClick={toggleInquiryModal}>
+                Close
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

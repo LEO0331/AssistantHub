@@ -1,12 +1,13 @@
 /* eslint-disable react/prop-types */
 import React, { useState } from 'react';
 
-const ContactModal = ({ isActive, onClose, user }) => {
+const ContactModal = ({ isActive, onClose, onSubmit, user }) => {
   const [inquiry, setInquiry] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     alert(`Inquiry sent to ${user.name}: ${inquiry}`);
+    onSubmit(inquiry); // Send the message to the parent component
     setInquiry('');
     onClose(); // Close the modal after sending the inquiry
   };
@@ -25,7 +26,7 @@ const ContactModal = ({ isActive, onClose, user }) => {
           <p><strong>Phone:</strong> {user.cell}</p>
           <form onSubmit={handleSubmit}>
             <div className="field">
-              <label className="label">Your Inquiry</label>
+              <label className="label">Inquiry:</label>
               <div className="control">
                 <textarea
                   className="textarea"
