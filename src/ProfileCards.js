@@ -5,6 +5,8 @@ import QRCode from 'react-qr-code';
 import React, { useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import markerIconPng from "leaflet/dist/images/marker-icon.png";
+import {Icon} from 'leaflet';
 
 function ProfileCards(props) {
   const {name, email, imageUrl, cell, country, likes, onLikeClick, onAddClick, isAdded, onInquirySubmit, location} = props;
@@ -99,7 +101,7 @@ function ProfileCards(props) {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
-                <Marker position={[location.coordinates.latitude, location.coordinates.longitude]}>
+                <Marker position={[location.coordinates.latitude, location.coordinates.longitude]} icon={new Icon({iconUrl: markerIconPng, iconSize: [25, 41], iconAnchor: [12, 41]})}>
                   <Popup>
                     Location: {country}
                   </Popup>
