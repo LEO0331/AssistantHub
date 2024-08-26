@@ -3,12 +3,15 @@
 import ContactModal from './ContactModal'; 
 import QRCode from 'react-qr-code';
 import React, { useState } from 'react';
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 
 function ProfileCards(props) {
-  const {name, email, imageUrl, cell, country, likes, onLikeClick, onAddClick, isAdded, onInquirySubmit} = props;
+  const {name, email, imageUrl, cell, country, likes, onLikeClick, onAddClick, isAdded, onInquirySubmit, location} = props;
 
   // State to manage the modal visibility
   const [isModalActive, setIsModalActive] = useState(false);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
   const handleNameClick = () => {
     setIsModalActive(true);
@@ -21,6 +24,14 @@ function ProfileCards(props) {
   const handleSubmit = (message) => {
     onInquirySubmit({ name, email, cell, message });
     closeModal();
+  };
+
+  const handleLocationClick = () => {
+    setIsMapModalOpen(true);
+  };
+
+  const handleCloseMapModal = () => {
+    setIsMapModalOpen(false);
   };
 
   return(
@@ -46,6 +57,9 @@ function ProfileCards(props) {
               {likes} {likes === 0 ? 'Like' : likes === 1 ? 'Like' : 'Likes'}
             </p>
             <p className="subtitle">
+              <span className="icon mr-1" onClick={handleLocationClick} style={{ cursor: 'pointer' }}>
+                <i className="fa fa-map-marker" aria-hidden="true"></i> 
+              </span>
               {country}
             </p>
           </div>
@@ -69,6 +83,34 @@ function ProfileCards(props) {
         user={{ name, email, cell }}
         onSubmit={handleSubmit}
       />
+      {/* Modal for Map - lat and long is random not match */}
+      {isMapModalOpen && (
+        <div className="modal is-active">
+          <div className="modal-background" onClick={handleCloseMapModal}></div>
+          <div className="modal-content">
+            <div className="box">
+              <h2 className="title">Location</h2>
+              <MapContainer
+                center={[location.coordinates.latitude, location.coordinates.longitude]}
+                zoom={10}
+                style={{ height: '300px', width: '100%' }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                <Marker position={[location.coordinates.latitude, location.coordinates.longitude]}>
+                  <Popup>
+                    Location: {country}
+                  </Popup>
+                </Marker>
+              </MapContainer>
+              <button className="button is-danger mt-3" onClick={handleCloseMapModal}>Close</button>
+            </div>
+          </div>
+          <button className="modal-close is-large" aria-label="close" onClick={handleCloseMapModal}></button>
+        </div>
+      )}
     </div>
   )
 }
