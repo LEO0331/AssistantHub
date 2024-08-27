@@ -116,11 +116,11 @@ function App() {
         <div className="hero-body">
           <p className="title">AssistantHub</p>
           <p className="subtitle">Your next personal Assistants!</p>
-          <p className="subtitle">todo: unit testing, caching, easy chatbot right down corner</p>
+          <p className="subtitle">todo: unit testing, caching, easy chatbot</p>
         </div>
       </section>
       <br />
-      <div className="field is-grouped">
+      <div className="field is-grouped is-grouped-multiline">
         <div className="control ml-1">
           <label htmlFor="numCards" className="tag is-info is-large">
             Find Incredible Assistants
