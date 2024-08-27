@@ -7,13 +7,14 @@ import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
 import {Icon} from 'leaflet';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
 
 function ProfileCards(props) {
   const {name, email, imageUrl, cell, country, likes, onLikeClick, onAddClick, isAdded, onInquirySubmit, location} = props;
 
-  // State to manage the modal visibility
   const [isModalActive, setIsModalActive] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState({ email: false, cell: false });
 
   const handleNameClick = () => {
     setIsModalActive(true);
@@ -36,6 +37,13 @@ function ProfileCards(props) {
     setIsMapModalOpen(false);
   };
 
+  const handleCopy = (type) => {
+    setCopyStatus({ ...copyStatus, [type]: true });
+    setTimeout(() => {
+      setCopyStatus({ ...copyStatus, [type]: false });
+    }, 2000);
+  };
+  
   return(
     <div className="card">
       <div className="card-content">
@@ -67,7 +75,29 @@ function ProfileCards(props) {
           </div>
         </div>
         <div className="content">
-          Contact me at <strong>{email}</strong> or <strong>{cell}</strong> !
+        <p>Please feel free and do not hestitate to contact me at</p> 
+        <p>
+          <strong>{email}</strong> 
+            <CopyToClipboard text={email} onCopy={() => handleCopy('email')}>
+              <button className="ml-2">
+                <span className="icon">
+                  <i className="fa fa-copy"></i>
+                </span>
+                <span>{copyStatus.email ? 'Copied!' : 'Copy'}</span>
+              </button>
+            </CopyToClipboard>
+        </p>
+        <p>
+          <strong>{cell}</strong> 
+            <CopyToClipboard text={cell} onCopy={() => handleCopy('cell')}>
+              <button className="ml-2">
+                <span className="icon">
+                  <i className="fa fa-copy"></i>
+                </span>
+                <span>{copyStatus.cell ? 'Copied!' : 'Copy'}</span>
+              </button>
+            </CopyToClipboard>
+        </p>
         </div>
       </div>
       <footer className="card-footer">
