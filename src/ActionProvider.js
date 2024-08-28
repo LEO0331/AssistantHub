@@ -9,7 +9,12 @@ class ActionProvider {
       const greetingMessage = this.createChatBotMessage("Hello! How can I help you?");
       this.updateChatbotState(greetingMessage);
     }
-  
+
+    handleButton() {
+      const message = this.createChatBotMessage("Click on the button allows you to add or remove a new assistant card.");
+      this.updateChatbotState(message);
+    }
+
     handleAddButton() {
       const message = this.createChatBotMessage("The 'Add' button allows you to add a new assistant card.");
       this.updateChatbotState(message);
@@ -35,6 +40,21 @@ class ActionProvider {
       this.updateChatbotState(message);
     }
   
+    handleInquiry() {
+      const message = this.createChatBotMessage("The view inquiry sent button allows you to view inquiries sent to each assistant.");
+      this.updateChatbotState(message);
+    }
+
+    handleView() {
+      const message = this.createChatBotMessage("The view added info button allows you to view all added information of assistants.");
+      this.updateChatbotState(message);
+    }
+
+    handleExport() {
+      const message = this.createChatBotMessage("The export added info button allows you to export all added information of assistants to CSV file.");
+      this.updateChatbotState(message);
+    }
+
     default() {
       const defaultMessage = this.createChatBotMessage("I'm not sure how to respond to that. Can you please rephrase?");
       this.updateChatbotState(defaultMessage);

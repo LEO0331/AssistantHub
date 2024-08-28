@@ -10,6 +10,7 @@ import 'react-chatbot-kit/build/main.css';
 import config from './ChatbotConfig';
 import MessageParser from './MessageParser';
 import ActionProvider from './ActionProvider';
+import './App.css';
 
 function App() {
   const [users, setUsers] = useState([]);
@@ -21,6 +22,11 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
   const [sentInquiries, setSentInquiries] = useState([]);
   const [isInquiryModalActive, setIsInquiryModalActive] = useState(false);
+  const [isChatbotVisible, setIsChatbotVisible] = useState(false);
+
+  const toggleChatbot = () => {
+    setIsChatbotVisible((prev) => !prev);
+  };
 
   // Fetch random users based on the number of cards
   const fetchUsers = async (num) => {
@@ -264,12 +270,18 @@ function App() {
           </div>
         </div>
       )}
-      <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: '1000' }}>
-        <Chatbot 
-          config={config} 
-          messageParser={MessageParser} 
-          actionProvider={ActionProvider} 
-        />
+      <div className={`chatbot-message ${isChatbotVisible ? 'active' : ''}`}>
+        {isChatbotVisible && (
+          <Chatbot
+            config={config}
+            messageParser={MessageParser}
+            actionProvider={ActionProvider}
+          />
+        )}
+      </div>
+      
+      <div className="chatbot-icon" onClick={toggleChatbot}>
+        <i className="fas fa-comment-dots"></i>
       </div>
     </div>
   );
