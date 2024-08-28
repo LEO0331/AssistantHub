@@ -11,6 +11,7 @@ import config from './ChatbotConfig';
 import MessageParser from './MessageParser';
 import ActionProvider from './ActionProvider';
 import './App.css';
+import DOMPurify from 'dompurify';
 
 function App() {
   const [users, setUsers] = useState([]);
@@ -81,7 +82,8 @@ function App() {
   };
 
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+    const sanitizedInput = DOMPurify.sanitize(e.target.value);
+    setSearchTerm(sanitizedInput);
   };
 
   const filteredUsers = users.filter((user) =>
@@ -133,7 +135,6 @@ function App() {
         <div className="hero-body">
           <p className="title">AssistantHub</p>
           <p className="subtitle">Your next personal Assistants!</p>
-          <p className="subtitle">todo: unit testing, caching</p>
         </div>
       </section>
       <br />
