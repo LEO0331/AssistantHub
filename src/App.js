@@ -5,6 +5,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import SearchBar from './SearchBar';
 import { CSVLink } from "react-csv";
+import Chatbot from 'react-chatbot-kit';
+import 'react-chatbot-kit/build/main.css';
+import config from './ChatbotConfig';
+import MessageParser from './MessageParser';
+import ActionProvider from './ActionProvider';
 
 function App() {
   const [users, setUsers] = useState([]);
@@ -259,7 +264,13 @@ function App() {
           </div>
         </div>
       )}
-
+      <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: '1000' }}>
+        <Chatbot 
+          config={config} 
+          messageParser={MessageParser} 
+          actionProvider={ActionProvider} 
+        />
+      </div>
     </div>
   );
 }
