@@ -134,7 +134,7 @@ function App() {
       <section className="hero is-link">
         <div className="hero-body">
           <p className="title">AssistantHub</p>
-          <p className="subtitle">Your next personal Assistants!</p>
+          <p className="subtitle">Your Personal Assistants!</p>
         </div>
       </section>
       <br />
