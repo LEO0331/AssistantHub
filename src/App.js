@@ -18,7 +18,10 @@ function App() {
   const [likes, setLikes] = useState([]); // Array to keep track of likes for each card
   const [searchTerm, setSearchTerm] = useState(''); // State for search term
   const [sortOrder, setSortOrder] = useState('highToLow'); // Default sort order
-  const [addedUsers, setAddedUsers] = useState([]); // Array to store added users
+  const [addedUsers, setAddedUsers] = useState(() => {
+    const storedUsers = localStorage.getItem('addedUsers');
+    return storedUsers ? JSON.parse(storedUsers) : [];
+  });
   const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
   const [sentInquiries, setSentInquiries] = useState([]);
   const [isInquiryModalActive, setIsInquiryModalActive] = useState(false);
@@ -45,6 +48,10 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    localStorage.setItem('addedUsers', JSON.stringify(addedUsers));
+  }, [addedUsers]);
+  
   useEffect(() => {
     fetchUsers(numberOfCards);
   }, [numberOfCards]);
@@ -100,7 +107,6 @@ function App() {
         cell: user.cell,
         country: user.location.country,
       };
-
       setAddedUsers([...addedUsers, newUser]);
     }
   };
