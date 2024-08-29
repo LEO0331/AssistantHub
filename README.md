@@ -15,31 +15,47 @@ The app features interactive profile cards with QR codes, likes counters, and dy
 
 ## Features
 
-- **Dynamic Profile Cards**: Fetch and display user profile cards based on user input.
-- **Input Validation**: Cap the number of cards to a maximum of 10 and handle zero input to clear the cards.
-- **Responsive Design**: Layout is responsive and adjusts according to screen size using CSS classes.
+- **Contact Modal**: Added the ability to send inquiries to assistants via a contact modal. Users can input their message and submit it directly through the interface.
+- **Map Integration**: Users can view the location of assistants on a map embedded within a modal. This feature uses Leaflet to render maps and markers.
+- **Clipboard Copy**: Implemented functionality to allow users to copy assistant contact information (email and phone) to the clipboard with a simple click.
+- **Responsive Layout**: Ensured the profile cards and other UI components are fully responsive, adapting seamlessly to different screen sizes.
+- **Unit Testing**: Introduced comprehensive unit tests for key components like `SearchBar`, `ProfileCards`, and `ContactModal` to ensure reliable and maintainable code.
 
 ## Technologies Used
 
 - **React**: Front-end library for building the user interface.
 - **Axios**: Promise-based HTTP client for making API requests.
+- **Leaflet**: JavaScript library for mobile-friendly interactive maps.
+- **React Testing Library**: Testing utilities for React components.
+- **Jest**: JavaScript testing framework.
 - **CSS**: For styling the components and layout.
 - **RandomUser API**: Provides random user data from [random user api](https://randomuser.me/).
 
-## Installation
+## Installation and Testing
 
 1. **Clone the repository and Navigate to the project directory**
 2. **Install dependencies and Start the development server**
-    - `npm install` and `npm start`
-    - The application will be available at http://localhost:3000 or http://localhost:3000/AssistantHub
-    - The application is deployed at https://leo0331.github.io/AssistantHub/ followed by [react-gh-pages](https://github.com/gitname/react-gh-pages?tab=readme-ov-file)
+    - Run `npm install` to install dependencies.
+    - Run `npm start` to start the development server.
+    - The application will be available at [http://localhost:3000](http://localhost:3000) or [http://localhost:3000/AssistantHub](http://localhost:3000/AssistantHub).
+    - The application is deployed at [https://leo0331.github.io/AssistantHub/](https://leo0331.github.io/AssistantHub/) using [react-gh-pages](https://github.com/gitname/react-gh-pages).
+3. Run `npm test` to run 9 unit test cases.
+
+![Testing](https://github.com/LEO0331/AssistantHub/blob/main/public/Screenshot%202024-08-18%20at%2011.13.05%E2%80%AFPM.png)
 
 ## Usage
-- Input Field: Enter a number between 0 and 10 in the input field to specify how many profile cards you want to display.
-- Profile Cards Display: The profile cards will automatically update based on the number entered.
+
+- **Search**: Use the search bar to filter profiles by typing in the assistant's name.
+- **Profile Management**: Add or remove profiles dynamically and manage the display of up to 10 profiles.
+- **Inquiries**: Click on an assistant's name to open a modal for sending inquiries directly.
+- **Maps**: View an assistant's location on a map by clicking the location icon.
+- **Copy to Clipboard**: Click on email or phone information to copy it to your clipboard.
 
 ![Demo website Version 1](https://github.com/LEO0331/AssistantHub/blob/main/public/Screenshot%202024-08-18%20at%2011.13.05%E2%80%AFPM.png)
 
 ## Components
-- ProfileCards: Displays individual user profile information including name, email, phone, image, cell, description, and ID.
-- App: Manages the state for the number of cards, handles input changes, fetches user data from the API, and renders the profile cards.
+
+- **ProfileCards**: Displays individual user profile information including name, email, phone, image, cell, description, and ID. Integrates functionalities such as like button, inquiry modal, and location map.
+- **SearchBar**: A simple input component that allows users to search profiles by name.
+- **ContactModal**: Handles user inquiries via a modal form.
+- **App**: Manages the state for the number of cards, handles input changes, fetches user data from the API, and renders the profile cards.
