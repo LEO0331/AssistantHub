@@ -41,7 +41,7 @@ The app features interactive profile cards with QR codes, likes counters, and dy
     - The application is deployed at [https://leo0331.github.io/AssistantHub/](https://leo0331.github.io/AssistantHub/) using [react-gh-pages](https://github.com/gitname/react-gh-pages).
 3. Run `npm test` to run 9 unit test cases.
 
-![Testing](https://github.com/LEO0331/AssistantHub/blob/main/public/Screenshot%202024-08-18%20at%2011.13.05%E2%80%AFPM.png)
+![Testing](https://github.com/LEO0331/AssistantHub/blob/main/public/Screenshot%202024-08-29%20at%2010.30.58%E2%80%AFPM.png)
 
 ## Usage
 
@@ -51,7 +51,7 @@ The app features interactive profile cards with QR codes, likes counters, and dy
 - **Maps**: View an assistant's location on a map by clicking the location icon.
 - **Copy to Clipboard**: Click on email or phone information to copy it to your clipboard.
 
-![Demo website Version 1](https://github.com/LEO0331/AssistantHub/blob/main/public/Screenshot%202024-08-18%20at%2011.13.05%E2%80%AFPM.png)
+![Demo Version 1](https://github.com/LEO0331/AssistantHub/blob/main/public/Screenshot%202024-08-29%20at%2010.36.54%E2%80%AFPM.png)
 
 ## Components
 
