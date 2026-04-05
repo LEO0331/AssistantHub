@@ -7,9 +7,11 @@ import SearchBar from './SearchBar';
 import config from './ChatbotConfig';
 import MessageParser from './MessageParser';
 import ActionProvider from './ActionProvider';
-import { AVAILABILITY_OPTIONS, BASE_SEED, generateAssistants, TALENT_ROLES } from './data/assistantFactory';
+import { AVAILABILITY_OPTIONS, BASE_SEED, TALENT_ROLES } from './data/assistantFactory';
+import { useDebouncedValue } from './hooks/useDebouncedValue';
 import { usePersistentState } from './hooks/usePersistentState';
 import { initialUiState, RATE_FILTERS, SORT_OPTIONS, uiReducer } from './state/uiReducer';
+import { loadTalentPool, TALENT_SOURCES } from './services/talentAdapter';
 import './App.css';
 
 const MAX_CARDS = 5000;
@@ -17,7 +19,12 @@ const DEFAULT_CARDS = 6;
 const DEFAULT_PAGE_SIZE = 24;
 const SHORTLIST_STORAGE_KEY = 'talentShortlist';
 const TALENT_SEED_KEY = 'talentSeed';
-const HIRE_STATUSES = ['New', 'Contacted', 'Interview', 'Hired'];
+const TALENT_SOURCE_KEY = 'talentSource';
+export const HIRE_STATUSES = ['New', 'Contacted', 'Interview', 'Hired'];
+export const DEFAULT_IMPORT_MAX_BYTES = 1024 * 1024 * 2;
+const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
+const TABLE_ROW_HEIGHT = 54;
+const TABLE_VIEWPORT_HEIGHT = 432;
 
 const RATE_CHIPS = [
   { value: RATE_FILTERS.ALL, label: 'All rates' },
@@ -26,7 +33,7 @@ const RATE_CHIPS = [
   { value: RATE_FILTERS.OVER_60, label: '$60+/hr' },
 ];
 
-const isRateMatch = (rate, filter) => {
+export const isRateMatch = (rate, filter) => {
   if (filter === RATE_FILTERS.UNDER_40) {
     return rate < 40;
   }
@@ -39,7 +46,7 @@ const isRateMatch = (rate, filter) => {
   return true;
 };
 
-const getNextStatus = (currentStatus) => {
+export const getNextStatus = (currentStatus) => {
   const index = HIRE_STATUSES.indexOf(currentStatus);
   if (index < 0 || index === HIRE_STATUSES.length - 1) {
     return HIRE_STATUSES[0];
@@ -47,7 +54,7 @@ const getNextStatus = (currentStatus) => {
   return HIRE_STATUSES[index + 1];
 };
 
-const readJsonFile = (file) => {
+export const readJsonFile = (file) => {
   if (typeof file.text === 'function') {
     return file.text();
   }
@@ -60,17 +67,112 @@ const readJsonFile = (file) => {
   });
 };
 
+const normalizeText = (value, max = 300) => String(value || '').trim().slice(0, max);
+
+const asSafeNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+export const validateDemoImportFile = (file, maxBytes = DEFAULT_IMPORT_MAX_BYTES) => {
+  if (!file) {
+    return { ok: false, error: 'No file selected.' };
+  }
+
+  const isJsonFile = file.type === 'application/json' || file.name?.toLowerCase().endsWith('.json');
+  if (!isJsonFile) {
+    return { ok: false, error: 'Please import a JSON file.' };
+  }
+
+  if (file.size > maxBytes) {
+    return { ok: false, error: `File exceeds ${(maxBytes / (1024 * 1024)).toFixed(1)}MB limit.` };
+  }
+
+  return { ok: true };
+};
+
+export const validateImportedDemoData = (parsed) => {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { ok: false, error: 'Top-level JSON must be an object.' };
+  }
+
+  if (parsed.shortlist !== undefined && !Array.isArray(parsed.shortlist)) {
+    return { ok: false, error: 'shortlist must be an array.' };
+  }
+  if (parsed.inquiries !== undefined && !Array.isArray(parsed.inquiries)) {
+    return { ok: false, error: 'inquiries must be an array.' };
+  }
+
+  const shortlist = (parsed.shortlist || []).map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw new Error(`shortlist[${index}] must be an object.`);
+    }
+
+    const id = normalizeText(item.id, 80);
+    const name = normalizeText(item.name, 80);
+    const role = normalizeText(item.role, 80);
+    const email = normalizeText(item.email, 120);
+
+    if (!id || !name || !role || !email) {
+      throw new Error(`shortlist[${index}] is missing required fields.`);
+    }
+
+    const hireStatus = HIRE_STATUSES.includes(item.hireStatus) ? item.hireStatus : HIRE_STATUSES[0];
+
+    return {
+      id,
+      name,
+      role,
+      email,
+      phone: normalizeText(item.phone, 40),
+      country: normalizeText(item.country, 64),
+      hourlyRateUsd: Math.max(0, Math.round(asSafeNumber(item.hourlyRateUsd, 0))),
+      hireStatus,
+    };
+  });
+
+  const inquiries = (parsed.inquiries || []).map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw new Error(`inquiries[${index}] must be an object.`);
+    }
+    return {
+      name: normalizeText(item.name, 80),
+      email: normalizeText(item.email, 120),
+      phone: normalizeText(item.phone, 40),
+      message: normalizeText(item.message, 600),
+    };
+  });
+
+  const nextSeed = Number(parsed.seed);
+  const seed = Number.isFinite(nextSeed) ? Math.trunc(nextSeed) : BASE_SEED;
+
+  return {
+    ok: true,
+    value: {
+      seed,
+      shortlist,
+      inquiries,
+    },
+  };
+};
+
 function App() {
   const [assistants, setAssistants] = useState([]);
   const [numberOfCards, setNumberOfCards] = useState(DEFAULT_CARDS);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
   const [shortlistedTalent, setShortlistedTalent] = usePersistentState(SHORTLIST_STORAGE_KEY, []);
   const [seed, setSeed] = usePersistentState(TALENT_SEED_KEY, BASE_SEED);
+  const [talentSource, setTalentSource] = usePersistentState(TALENT_SOURCE_KEY, TALENT_SOURCES.LOCAL);
   const [sentInquiries, setSentInquiries] = useState([]);
   const [jsonStatus, setJsonStatus] = useState('');
+  const [controlStatus, setControlStatus] = useState('');
   const [viewMode, setViewMode] = useState('cards');
+  const [tableScrollTop, setTableScrollTop] = useState(0);
   const importInputRef = useRef(null);
+  const tableViewportRef = useRef(null);
+  const debouncedSearchTerm = useDebouncedValue(uiState.searchTerm.trim().toLowerCase(), 180);
 
   useEffect(() => {
     let isMounted = true;
@@ -81,17 +183,22 @@ function App() {
         if (!isMounted) {
           return;
         }
-        setAssistants(generateAssistants(numberOfCards, { seed }));
-        dispatchUi({ type: 'setLoading', payload: false });
+        loadTalentPool({ count: numberOfCards, seed, source: talentSource }).then((data) => {
+          if (!isMounted) {
+            return;
+          }
+          setAssistants(data);
+          dispatchUi({ type: 'setLoading', payload: false });
+        });
       },
-      numberOfCards >= 7 ? 180 : 0
+      numberOfCards >= 7 ? 120 : 0
     );
 
     return () => {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [numberOfCards, seed]);
+  }, [numberOfCards, seed, talentSource]);
 
   useEffect(() => {
     if (!uiState.selectedTalentId) {
@@ -104,17 +211,37 @@ function App() {
     }
   }, [assistants, uiState.selectedTalentId]);
 
-  const normalizedSearch = uiState.searchTerm.trim().toLowerCase();
+  const searchIndex = useMemo(
+    () =>
+      assistants.map((assistant) => ({
+        id: assistant.id,
+        text: `${assistant.name} ${assistant.role} ${assistant.skills.join(' ')}`.toLowerCase(),
+      })),
+    [assistants]
+  );
+
+  const matchedSearchIds = useMemo(() => {
+    if (!debouncedSearchTerm) {
+      return null;
+    }
+    const ids = new Set();
+    for (let index = 0; index < searchIndex.length; index += 1) {
+      if (searchIndex[index].text.includes(debouncedSearchTerm)) {
+        ids.add(searchIndex[index].id);
+      }
+    }
+    return ids;
+  }, [searchIndex, debouncedSearchTerm]);
 
   const visibleAssistants = useMemo(() => {
     const filtered = assistants.filter((assistant) => {
-      const keyword = `${assistant.name} ${assistant.role} ${assistant.skills.join(' ')}`.toLowerCase();
       const roleMatch = uiState.selectedRole === 'all' || assistant.role === uiState.selectedRole;
       const availabilityMatch =
         uiState.selectedAvailability === 'all' || assistant.availability === uiState.selectedAvailability;
       const rateMatch = isRateMatch(assistant.hourlyRateUsd, uiState.selectedRate);
+      const searchMatch = !matchedSearchIds || matchedSearchIds.has(assistant.id);
 
-      return keyword.includes(normalizedSearch) && roleMatch && availabilityMatch && rateMatch;
+      return searchMatch && roleMatch && availabilityMatch && rateMatch;
     });
 
     return filtered.sort((a, b) => {
@@ -125,20 +252,20 @@ function App() {
     });
   }, [
     assistants,
-    normalizedSearch,
     uiState.selectedRole,
     uiState.selectedAvailability,
     uiState.selectedRate,
     uiState.sortOrder,
+    matchedSearchIds,
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(visibleAssistants.length / DEFAULT_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(visibleAssistants.length / pageSize));
 
   const pagedAssistants = useMemo(() => {
     const safePage = Math.min(currentPage, totalPages);
-    const start = (safePage - 1) * DEFAULT_PAGE_SIZE;
-    return visibleAssistants.slice(start, start + DEFAULT_PAGE_SIZE);
-  }, [visibleAssistants, currentPage, totalPages]);
+    const start = (safePage - 1) * pageSize;
+    return visibleAssistants.slice(start, start + pageSize);
+  }, [visibleAssistants, currentPage, totalPages, pageSize]);
 
   const selectedTalent = useMemo(
     () => assistants.find((assistant) => assistant.id === uiState.selectedTalentId) || null,
@@ -146,9 +273,16 @@ function App() {
   );
 
   const handleInputChange = (event) => {
-    const next = Math.min(Math.max(Number(event.target.value) || 0, 0), MAX_CARDS);
+    const rawValue = event.target.value;
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed) && rawValue !== '') {
+      setControlStatus('Card count must be a number.');
+      return;
+    }
+    const next = Math.min(Math.max(parsed || 0, 0), MAX_CARDS);
     setNumberOfCards(next);
     setCurrentPage(1);
+    setControlStatus('');
   };
 
   const handleAddCard = () => {
@@ -211,14 +345,25 @@ function App() {
   const handleSeedChange = (event) => {
     const nextSeed = Number(event.target.value);
     if (Number.isFinite(nextSeed)) {
-      setSeed(nextSeed);
+      setSeed(Math.trunc(nextSeed));
       setCurrentPage(1);
+      setControlStatus('');
+    } else if (event.target.value !== '') {
+      setControlStatus('Seed must be a valid number.');
     }
   };
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [uiState.searchTerm, uiState.selectedRole, uiState.selectedAvailability, uiState.selectedRate, uiState.sortOrder]);
+      setCurrentPage(1);
+      setTableScrollTop(0);
+  }, [
+    uiState.searchTerm,
+    uiState.selectedRole,
+    uiState.selectedAvailability,
+    uiState.selectedRate,
+    uiState.sortOrder,
+    pageSize,
+  ]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -252,31 +397,71 @@ function App() {
     }
 
     try {
+      const fileValidation = validateDemoImportFile(file);
+      if (!fileValidation.ok) {
+        setJsonStatus(`Import failed: ${fileValidation.error}`);
+        return;
+      }
+
       const text = await readJsonFile(file);
       const parsed = JSON.parse(text);
-
-      if (Array.isArray(parsed.shortlist)) {
-        setShortlistedTalent(parsed.shortlist);
+      const validated = validateImportedDemoData(parsed);
+      if (!validated.ok) {
+        setJsonStatus(`Import failed: ${validated.error}`);
+        return;
       }
-      if (Array.isArray(parsed.inquiries)) {
-        setSentInquiries(parsed.inquiries);
-      }
-      if (Number.isFinite(Number(parsed.seed))) {
-        setSeed(Number(parsed.seed));
-      }
+      setShortlistedTalent(validated.value.shortlist);
+      setSentInquiries(validated.value.inquiries);
+      setSeed(validated.value.seed);
       setJsonStatus('Demo data imported.');
-    } catch {
-      setJsonStatus('Import failed: invalid JSON format.');
+    } catch (error) {
+      setJsonStatus(`Import failed: ${error.message || 'invalid JSON format.'}`);
     } finally {
       event.target.value = '';
     }
   };
 
+  const handleResetDemoData = () => {
+    setShortlistedTalent([]);
+    setSentInquiries([]);
+    setSeed(BASE_SEED);
+    setTalentSource(TALENT_SOURCES.LOCAL);
+    setNumberOfCards(DEFAULT_CARDS);
+    setCurrentPage(1);
+    setPageSize(DEFAULT_PAGE_SIZE);
+    setViewMode('cards');
+    setTableScrollTop(0);
+    setJsonStatus('Demo data reset to defaults.');
+    setControlStatus('');
+    dispatchUi({ type: 'resetFilters' });
+  };
+
+  const tableVirtualRows = useMemo(() => {
+    const source = visibleAssistants;
+    const totalHeight = source.length * TABLE_ROW_HEIGHT;
+    const startIndex = Math.max(0, Math.floor(tableScrollTop / TABLE_ROW_HEIGHT) - 5);
+    const endIndex = Math.min(
+      source.length,
+      Math.ceil((tableScrollTop + TABLE_VIEWPORT_HEIGHT) / TABLE_ROW_HEIGHT) + 5
+    );
+    return {
+      totalHeight,
+      startIndex,
+      endIndex,
+      items: source.slice(startIndex, endIndex),
+    };
+  }, [visibleAssistants, tableScrollTop]);
+
   const renderEmptyState = () => {
     if (numberOfCards === 0) {
       return <p className="empty-state">Talent list is empty. Increase card count to load candidates.</p>;
     }
-    if (normalizedSearch || uiState.selectedRole !== 'all' || uiState.selectedAvailability !== 'all' || uiState.selectedRate !== RATE_FILTERS.ALL) {
+    if (
+      debouncedSearchTerm ||
+      uiState.selectedRole !== 'all' ||
+      uiState.selectedAvailability !== 'all' ||
+      uiState.selectedRate !== RATE_FILTERS.ALL
+    ) {
       return <p className="empty-state">No matching talent found. Try another skill, role, or rate filter.</p>;
     }
     return <p className="empty-state">No profile cards to display.</p>;
@@ -329,6 +514,8 @@ function App() {
             <SearchBar
               value={uiState.searchTerm}
               onChange={(event) => dispatchUi({ type: 'setSearch', payload: event.target.value })}
+              onClear={() => dispatchUi({ type: 'setSearch', payload: '' })}
+              isSearching={uiState.searchTerm.trim().toLowerCase() !== debouncedSearchTerm}
             />
 
             <select
@@ -355,6 +542,22 @@ function App() {
               />
             </div>
 
+            <div className="seed-control">
+              <label htmlFor="sourceSelect" className="panel-label">
+                Data source
+              </label>
+              <select
+                id="sourceSelect"
+                className="select-control"
+                value={talentSource}
+                onChange={(event) => setTalentSource(event.target.value)}
+                aria-label="Data source"
+              >
+                <option value={TALENT_SOURCES.LOCAL}>Local generator</option>
+                <option value={TALENT_SOURCES.MOCK_API}>Mock API adapter</option>
+              </select>
+            </div>
+
             <button className="ui-button dark" onClick={() => dispatchUi({ type: 'toggleInquiryModal' })}>
               View Hiring Inquiries
             </button>
@@ -374,6 +577,12 @@ function App() {
             </button>
             <button className="ui-button secondary" onClick={() => importInputRef.current?.click()}>
               Import JSON
+            </button>
+            <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'toggleHelpModal' })}>
+              Help
+            </button>
+            <button className="ui-button secondary" onClick={handleResetDemoData}>
+              Reset Demo Data
             </button>
             <button
               className="ui-button secondary"
@@ -444,12 +653,15 @@ function App() {
             </div>
           </div>
           {jsonStatus && <p className="json-status">{jsonStatus}</p>}
+          {controlStatus && <p className="json-status">{controlStatus}</p>}
         </section>
 
         <section className="cards-section" aria-label="Talent profiles">
           {!uiState.isLoading && visibleAssistants.length > 0 && (
             <div className="result-summary">
-              Showing {pagedAssistants.length} of {visibleAssistants.length} talents (page {currentPage}/{totalPages})
+              {viewMode === 'cards'
+                ? `Showing ${pagedAssistants.length} of ${visibleAssistants.length} talents (page ${currentPage}/${totalPages})`
+                : `Showing ${visibleAssistants.length} talents in virtualized list mode`}
             </div>
           )}
           {uiState.isLoading ? (
@@ -485,40 +697,70 @@ function App() {
                       <th>Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {pagedAssistants.map((assistant) => (
-                      <tr key={assistant.id}>
-                        <td>{assistant.name}</td>
-                        <td>{assistant.role}</td>
-                        <td>{assistant.availability}</td>
-                        <td>${assistant.hourlyRateUsd}/hr</td>
-                        <td>{assistant.likes}</td>
-                        <td>{getTalentHireStatus(assistant.id)}</td>
-                        <td className="table-actions">
-                          <button className="ui-button secondary small" onClick={() => handleLikeClick(assistant.id)}>
-                            Like
-                          </button>
-                          <button className="ui-button secondary small" onClick={() => handleAddUser(assistant)}>
-                            {shortlistedTalent.some((user) => user.id === assistant.id) ? 'Shortlisted' : 'Shortlist'}
-                          </button>
-                          <button
-                            className="ui-button secondary small"
-                            onClick={() => dispatchUi({ type: 'openDrawer', payload: assistant.id })}
-                          >
-                            Detail
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
                 </table>
+                <div
+                  className="table-viewport"
+                  ref={tableViewportRef}
+                  style={{ maxHeight: `${TABLE_VIEWPORT_HEIGHT}px`, overflowY: 'auto' }}
+                  onScroll={(event) => setTableScrollTop(event.currentTarget.scrollTop)}
+                >
+                  <div style={{ height: `${tableVirtualRows.totalHeight}px`, position: 'relative' }}>
+                    <table className="talent-table">
+                      <tbody>
+                        {tableVirtualRows.items.map((assistant, rowIndex) => (
+                          <tr
+                            key={assistant.id}
+                            style={{
+                              position: 'absolute',
+                              top: `${(tableVirtualRows.startIndex + rowIndex) * TABLE_ROW_HEIGHT}px`,
+                              left: 0,
+                              right: 0,
+                              width: '100%',
+                              display: 'table',
+                              tableLayout: 'fixed',
+                              height: `${TABLE_ROW_HEIGHT}px`,
+                            }}
+                          >
+                            <td>{assistant.name}</td>
+                            <td>{assistant.role}</td>
+                            <td>{assistant.availability}</td>
+                            <td>${assistant.hourlyRateUsd}/hr</td>
+                            <td>{assistant.likes}</td>
+                            <td>{getTalentHireStatus(assistant.id)}</td>
+                            <td className="table-actions">
+                              <button className="ui-button secondary small" onClick={() => handleLikeClick(assistant.id)}>
+                                Like
+                              </button>
+                              <button className="ui-button secondary small" onClick={() => handleAddUser(assistant)}>
+                                {shortlistedTalent.some((user) => user.id === assistant.id) ? 'Shortlisted' : 'Shortlist'}
+                              </button>
+                              <button
+                                className="ui-button secondary small"
+                                onClick={() => dispatchUi({ type: 'openDrawer', payload: assistant.id })}
+                              >
+                                Detail
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )
           ) : (
             renderEmptyState()
           )}
-          {!uiState.isLoading && visibleAssistants.length > DEFAULT_PAGE_SIZE && (
+          {!uiState.isLoading && viewMode === 'cards' && visibleAssistants.length > pageSize && (
             <div className="pagination-bar">
+              <button
+                className="ui-button secondary"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                First
+              </button>
               <button
                 className="ui-button secondary"
                 onClick={() => setCurrentPage((previous) => Math.max(previous - 1, 1))}
@@ -533,6 +775,55 @@ function App() {
               >
                 Next
               </button>
+              <button
+                className="ui-button secondary"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                Last
+              </button>
+              <div className="page-size-control">
+                <label htmlFor="pageSizeSelect" className="panel-label">
+                  Per page
+                </label>
+                <select
+                  id="pageSizeSelect"
+                  className="select-control"
+                  value={pageSize}
+                  onChange={(event) => setPageSize(Number(event.target.value))}
+                  aria-label="Results per page"
+                >
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="page-jump-control">
+                <label htmlFor="pageJumpInput" className="panel-label">
+                  Jump to
+                </label>
+                <input
+                  id="pageJumpInput"
+                  className="input-control"
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  value={currentPage}
+                  onChange={(event) => {
+                    const parsed = Number(event.target.value);
+                    if (!Number.isFinite(parsed) && event.target.value !== '') {
+                      setControlStatus('Page must be a number.');
+                      return;
+                    }
+                    const nextPage = Math.min(Math.max(parsed || 1, 1), totalPages);
+                    setCurrentPage(nextPage);
+                    setControlStatus('');
+                  }}
+                  aria-label="Jump to page"
+                />
+              </div>
             </div>
           )}
         </section>
@@ -553,7 +844,22 @@ function App() {
               <strong>Rate:</strong> ${selectedTalent.hourlyRateUsd}/hr
             </p>
             <p>
+              <strong>Experience:</strong> {selectedTalent.yearsExperience} years
+            </p>
+            <p>
+              <strong>Projects:</strong> {selectedTalent.projectsCompleted}
+            </p>
+            <p>
+              <strong>Avg Response:</strong> {selectedTalent.responseTimeHours} hours
+            </p>
+            <p>
+              <strong>Timezone:</strong> {selectedTalent.timezone}
+            </p>
+            <p>
               <strong>Skills:</strong> {selectedTalent.skills.join(', ')}
+            </p>
+            <p>
+              <strong>Languages:</strong> {selectedTalent.languages.join(', ')}
             </p>
             <p>
               <strong>Hire Status:</strong> {getTalentHireStatus(selectedTalent.id)}
@@ -623,6 +929,32 @@ function App() {
               )}
             </div>
             <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'toggleInquiryModal' })}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {uiState.isHelpModalOpen && (
+        <div className="modal is-active" role="dialog" aria-modal="true" aria-label="How this works">
+          <div className="modal-background" onClick={() => dispatchUi({ type: 'toggleHelpModal' })}></div>
+          <div className="modal-content modal-box">
+            <h2>How This Works</h2>
+            <div className="modal-scroll">
+              <p>
+                This portal uses deterministic faker data to simulate a real talent marketplace. Change the seed to regenerate a different but stable dataset.
+              </p>
+              <p>
+                Use role/availability/rate chips and search to narrow candidates, then shortlist talent and move them through the hire-status pipeline: New, Contacted, Interview, Hired.
+              </p>
+              <p>
+                Large pool mode (500, 2000, 5000) is optimized through pagination and optional list view so the app can mimic high-volume scenarios without a backend.
+              </p>
+              <p>
+                All shortlist and seed data persist in localStorage. You can export/import JSON for demo portability.
+              </p>
+            </div>
+            <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'toggleHelpModal' })}>
               Close
             </button>
           </div>

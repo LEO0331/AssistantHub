@@ -29,6 +29,8 @@ const SKILLS = [
   'Stakeholder Coordination',
 ];
 
+const LANGUAGES = ['English', 'Mandarin', 'Spanish', 'Japanese', 'Korean', 'German', 'French'];
+
 const clampCount = (count) => {
   const normalized = Number(count);
   if (!Number.isFinite(normalized) || normalized < 0) {
@@ -54,6 +56,11 @@ const createAssistant = (index) => {
     avatarUrl: faker.image.avatar(),
     country: faker.location.country(),
     hourlyRateUsd: faker.number.int({ min: 20, max: 90 }),
+    yearsExperience: faker.number.int({ min: 1, max: 14 }),
+    projectsCompleted: faker.number.int({ min: 8, max: 220 }),
+    responseTimeHours: faker.number.int({ min: 1, max: 24 }),
+    timezone: faker.location.timeZone(),
+    languages: faker.helpers.arrayElements(LANGUAGES, { min: 1, max: 3 }),
     availability: faker.helpers.arrayElement(AVAILABILITY_OPTIONS),
     coordinates: {
       lat: toCoordinate(faker.location.latitude()),

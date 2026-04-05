@@ -60,6 +60,51 @@
   gap: 4px;
 }
 
+.search-shell {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  padding-left: 34px;
+  padding-right: 64px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  font-size: 0.88rem;
+}
+
+.clear-search-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 999px;
+  background: var(--bg-sand);
+  color: var(--text-dark-warm);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.search-hint {
+  position: absolute;
+  right: 56px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
 .chip-section {
   margin-top: var(--space-3);
   border-top: 1px solid var(--border-cream);
@@ -201,7 +246,7 @@
   border: 1px solid var(--border-cream);
   border-radius: var(--radius-lg);
   background: var(--bg-ivory);
-  overflow: auto;
+  overflow: hidden;
 }
 
 .talent-table {
@@ -230,6 +275,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.table-viewport {
+  overflow-x: auto;
 }
 
 .profile-card {
@@ -368,7 +417,23 @@
 .pagination-bar {
   margin-top: var(--space-3);
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
+}
+
+.page-size-control,
+.page-jump-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-size-control .select-control {
+  width: 88px;
+}
+
+.page-jump-control .input-control {
+  width: 88px;
 }
 
 .modal {
@@ -543,6 +608,14 @@
 
   .button-row .ui-button {
     flex: 1;
+  }
+
+  .search-input {
+    padding-right: 56px;
+  }
+
+  .clear-search-button {
+    padding: 3px 8px;
   }
 
   .chatbot-panel {

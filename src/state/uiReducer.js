@@ -20,6 +20,7 @@ export const initialUiState = {
   isInquiryModalOpen: false,
   isChatbotVisible: false,
   isDrawerOpen: false,
+  isHelpModalOpen: false,
   isLoading: false,
   selectedTalentId: null,
 };
@@ -42,12 +43,23 @@ export const uiReducer = (state, action) => {
       return { ...state, isInquiryModalOpen: !state.isInquiryModalOpen };
     case 'toggleChatbot':
       return { ...state, isChatbotVisible: !state.isChatbotVisible };
+    case 'toggleHelpModal':
+      return { ...state, isHelpModalOpen: !state.isHelpModalOpen };
     case 'setLoading':
       return { ...state, isLoading: action.payload };
     case 'openDrawer':
       return { ...state, isDrawerOpen: true, selectedTalentId: action.payload };
     case 'closeDrawer':
       return { ...state, isDrawerOpen: false, selectedTalentId: null };
+    case 'resetFilters':
+      return {
+        ...state,
+        searchTerm: '',
+        sortOrder: SORT_OPTIONS.HIGH_TO_LOW,
+        selectedRole: 'all',
+        selectedAvailability: 'all',
+        selectedRate: RATE_FILTERS.ALL,
+      };
     default:
       return state;
   }

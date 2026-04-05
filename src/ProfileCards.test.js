@@ -1,4 +1,4 @@
-/* eslint-disable react/display-name */
+﻿/* eslint-disable react/display-name */
 /* eslint-disable react/prop-types */
 /* eslint-disable no-undef */
 import React from 'react';
@@ -7,7 +7,18 @@ import '@testing-library/jest-dom';
 import ProfileCards from './ProfileCards';
 import ContactModal from './ContactModal';
 
-jest.mock('./ContactModal', () => jest.fn(() => <div>ContactModal</div>));
+jest.mock('./ContactModal', () =>
+  jest.fn(({ isActive, onSubmit }) => (
+    <div>
+      ContactModal
+      {isActive && (
+        <button type="button" onClick={() => onSubmit('hello from modal')}>
+          Trigger Modal Submit
+        </button>
+      )}
+    </div>
+  ))
+);
 jest.mock('react-qr-code', () => () => <div>QRCode</div>);
 jest.mock('react-copy-to-clipboard', () => ({
   CopyToClipboard: ({ children, onCopy }) => <div onClick={onCopy}>{children}</div>,
@@ -28,6 +39,11 @@ describe('ProfileCards', () => {
       skills: ['Calendar Management', 'Inbox Triage'],
       availability: 'Available now',
       hourlyRateUsd: 45,
+      yearsExperience: 6,
+      projectsCompleted: 42,
+      responseTimeHours: 4,
+      timezone: 'Asia/Taipei',
+      languages: ['English', 'Mandarin'],
       email: 'john@example.com',
       phone: '123-456-7890',
       avatarUrl: 'http://example.com/image.jpg',
@@ -62,6 +78,8 @@ describe('ProfileCards', () => {
     expect(screen.getByText('John Doe')).toBeInTheDocument();
     expect(screen.getByText('Executive Assistant')).toBeInTheDocument();
     expect(screen.getByText(/\$45\/hr/)).toBeInTheDocument();
+    expect(screen.getByText(/6 yrs exp/)).toBeInTheDocument();
+    expect(screen.getByText(/Languages: English, Mandarin/)).toBeInTheDocument();
     expect(screen.getByText('USA')).toBeInTheDocument();
     expect(screen.getByText('QRCode')).toBeInTheDocument();
     expect(screen.getByText('5 Likes')).toBeInTheDocument();
@@ -78,6 +96,20 @@ describe('ProfileCards', () => {
       expect.objectContaining({ isActive: true }),
       expect.anything()
     );
+  });
+
+  test('submits inquiry from modal callback', () => {
+    render(<ProfileCards {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open contact form for John Doe' }));
+    fireEvent.click(screen.getByText('Trigger Modal Submit'));
+
+    expect(defaultProps.onInquirySubmit).toHaveBeenCalledWith({
+      name: 'John Doe',
+      email: 'john@example.com',
+      phone: '123-456-7890',
+      message: 'hello from modal',
+    });
   });
 
   test('disables shortlist button when already added', () => {
@@ -102,18 +134,32 @@ describe('ProfileCards', () => {
     expect(defaultProps.onViewDetails).toHaveBeenCalledTimes(1);
   });
 
-  test('opens map modal when location button is clicked', () => {
+  test('opens and closes map modal', () => {
     render(<ProfileCards {...defaultProps} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Show location for John Doe' }));
-
     expect(screen.getByText(/MapContainer/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByText('Close')[0]);
+    expect(screen.queryByText(/MapContainer/)).not.toBeInTheDocument();
   });
 
   test('shows copied status for email copy action', () => {
     render(<ProfileCards {...defaultProps} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy email' }));
+    expect(screen.getByText('Copied!')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(screen.getAllByText('Copy').length).toBeGreaterThan(0);
+  });
+
+  test('shows copied status for phone copy action', () => {
+    render(<ProfileCards {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy phone' }));
     expect(screen.getByText('Copied!')).toBeInTheDocument();
 
     act(() => {

@@ -22,6 +22,11 @@ describe('assistantFactory', () => {
       avatarUrl: expect.any(String),
       country: expect.any(String),
       hourlyRateUsd: expect.any(Number),
+      yearsExperience: expect.any(Number),
+      projectsCompleted: expect.any(Number),
+      responseTimeHours: expect.any(Number),
+      timezone: expect.any(String),
+      languages: expect.any(Array),
       availability: expect.any(String),
       coordinates: {
         lat: expect.any(Number),

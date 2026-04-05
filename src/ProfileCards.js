@@ -60,9 +60,12 @@ function ProfileCards({
           </button>
           <p className="talent-role">{assistant.role}</p>
           <p className="talent-meta">
-            {assistant.availability} 繚 ${assistant.hourlyRateUsd}/hr
+            {assistant.availability} at ${assistant.hourlyRateUsd}/hr
           </p>
           <p className="status-chip">Hire Status: {hireStatus}</p>
+          <p className="talent-meta">
+            {assistant.yearsExperience} yrs exp | {assistant.projectsCompleted} projects
+          </p>
           <div className="qr-row">
             <QRCode value={assistant.phone} size={34} />
           </div>
@@ -70,6 +73,9 @@ function ProfileCards({
       </div>
 
       <p className="talent-skills">Skills: {assistant.skills.join(', ')}</p>
+      <p className="talent-skills">
+        Languages: {assistant.languages.join(', ')} | TZ: {assistant.timezone} | Avg reply: {assistant.responseTimeHours}h
+      </p>
 
       <div className="stat-row">
         <button

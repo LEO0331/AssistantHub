@@ -34,13 +34,36 @@ describe('uiReducer', () => {
   test('toggles modal and drawer visibility state', () => {
     const modalOpen = uiReducer(initialUiState, { type: 'toggleAddedModal' });
     const inquiryOpen = uiReducer(modalOpen, { type: 'toggleInquiryModal' });
-    const openedDrawer = uiReducer(inquiryOpen, { type: 'openDrawer', payload: 'id-1' });
+    const helpOpen = uiReducer(inquiryOpen, { type: 'toggleHelpModal' });
+    const openedDrawer = uiReducer(helpOpen, { type: 'openDrawer', payload: 'id-1' });
     const closedDrawer = uiReducer(openedDrawer, { type: 'closeDrawer' });
 
     expect(modalOpen.isAddedModalOpen).toBe(true);
     expect(inquiryOpen.isInquiryModalOpen).toBe(true);
+    expect(helpOpen.isHelpModalOpen).toBe(true);
     expect(openedDrawer.isDrawerOpen).toBe(true);
     expect(openedDrawer.selectedTalentId).toBe('id-1');
     expect(closedDrawer.isDrawerOpen).toBe(false);
+  });
+
+  test('resets filters without closing ui containers', () => {
+    const dirty = {
+      ...initialUiState,
+      searchTerm: 'ops',
+      sortOrder: SORT_OPTIONS.LOW_TO_HIGH,
+      selectedRole: 'Executive Assistant',
+      selectedAvailability: 'Available now',
+      selectedRate: RATE_FILTERS.OVER_60,
+      isAddedModalOpen: true,
+    };
+
+    const reset = uiReducer(dirty, { type: 'resetFilters' });
+
+    expect(reset.searchTerm).toBe('');
+    expect(reset.sortOrder).toBe(SORT_OPTIONS.HIGH_TO_LOW);
+    expect(reset.selectedRole).toBe('all');
+    expect(reset.selectedAvailability).toBe('all');
+    expect(reset.selectedRate).toBe(RATE_FILTERS.ALL);
+    expect(reset.isAddedModalOpen).toBe(true);
   });
 });

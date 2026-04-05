@@ -8,10 +8,12 @@ AssistantHub is a lightweight React talent-pool demo portal for discovering assi
 
 ## Highlights
 - Deterministic talent generation via `@faker-js/faker` (seed-controlled).
+- Data-source adapter switch (`local` / `mock-api`) for backend migration readiness.
 - Talent filters: role, availability, rate range, and text search.
 - One-page talent detail drawer (no routing, no backend).
 - Local hire status pipeline: `New -> Contacted -> Interview -> Hired`.
 - Local demo data portability with CSV and JSON export/import.
+- Large-volume demo support: `Load 500/2000/5000`, virtualized list mode, pagination.
 - Chatbot helper + map modal + contact inquiry flow.
 
 ## Tech Stack
@@ -25,6 +27,13 @@ AssistantHub is a lightweight React talent-pool demo portal for discovering assi
 There is currently no backend. State is client-side only:
 - `localStorage`: shortlist, seed
 - in-memory state: generated talent list, filters, inquiries, UI modal/drawer state
+
+## Security & Demo Limitations
+- This is a client-only demo: all state can be modified in browser devtools and must not be treated as secure or authoritative.
+- Imported JSON is schema-validated and size-capped, but it is still untrusted demo input; do not use this flow for sensitive data.
+- No authentication/authorization is implemented; anyone with browser access can operate all UI actions.
+- No server-side audit trail exists; hire-status transitions are local only.
+- Virtualized and paginated rendering supports large demo pools, but browser memory/CPU still set the practical upper bound.
 
 ## Scripts
 - `npm start`: run dev server
