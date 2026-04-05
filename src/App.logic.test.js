@@ -77,6 +77,19 @@ describe('App logic helpers', () => {
     global.FileReader = original;
   });
 
+  test('readJsonFile rejects when FileReader errors', async () => {
+    const original = global.FileReader;
+    class FailingFileReader {
+      readAsText() {
+        this.onerror();
+      }
+    }
+    global.FileReader = FailingFileReader;
+
+    await expect(readJsonFile({})).rejects.toThrow('Failed to read file');
+    global.FileReader = original;
+  });
+
   test('validateImportedDemoData validates schema and sanitizes values', () => {
     const valid = validateImportedDemoData({
       seed: 111,
@@ -106,6 +119,10 @@ describe('App logic helpers', () => {
   });
 
   test('validateDemoImportFile enforces json type and max file size', () => {
+    const missing = validateDemoImportFile(null);
+    expect(missing.ok).toBe(false);
+    expect(missing.error).toMatch(/No file selected/i);
+
     const tooLarge = validateDemoImportFile({
       size: DEFAULT_IMPORT_MAX_BYTES + 1,
       type: 'application/json',
@@ -128,5 +145,31 @@ describe('App logic helpers', () => {
       name: 'demo.json',
     });
     expect(valid.ok).toBe(true);
+  });
+
+  test('validateImportedDemoData handles invalid top-level and inquiry shape', () => {
+    const topLevel = validateImportedDemoData(null);
+    expect(topLevel.ok).toBe(false);
+    expect(topLevel.error).toMatch(/Top-level JSON must be an object/i);
+
+    const badInquiries = validateImportedDemoData({ shortlist: [], inquiries: 'nope' });
+    expect(badInquiries.ok).toBe(false);
+    expect(badInquiries.error).toMatch(/inquiries must be an array/i);
+  });
+
+  test('validateImportedDemoData throws for bad shortlist/inquiry items', () => {
+    expect(() =>
+      validateImportedDemoData({
+        shortlist: [{ id: '', name: 'x', role: 'y', email: 'z' }],
+        inquiries: [],
+      })
+    ).toThrow(/missing required fields/i);
+
+    expect(() =>
+      validateImportedDemoData({
+        shortlist: [],
+        inquiries: [null],
+      })
+    ).toThrow(/inquiries\[0\] must be an object/i);
   });
 });

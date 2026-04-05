@@ -75,6 +75,37 @@ describe('App integration', () => {
     window.history.pushState({}, '', '/');
   });
 
+  test('updates presenter checklist as demo actions are completed', async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByText('Run Demo Scenario'));
+    await waitFor(() => {
+      expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Search assistants by name'), { target: { value: 'exec' } });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Shortlist').length).toBeGreaterThan(0);
+    });
+    fireEvent.click(screen.getAllByText('Shortlist')[0]);
+    fireEvent.click(screen.getByText('View Shortlist'));
+    fireEvent.click(screen.getByText('Status: New'));
+    fireEvent.click(screen.getByText('Close'));
+
+    fireEvent.click(screen.getAllByText('View Details')[0]);
+    fireEvent.click(screen.getByText('Close'));
+    fireEvent.click(screen.getByText('Export JSON'));
+
+    const checklist = screen.getByRole('region', { name: 'Presenter checklist' });
+    expect(checklist.textContent).toContain('✓ Load 500+');
+    expect(checklist.textContent).toContain('✓ Filter/Search');
+    expect(checklist.textContent).toContain('✓ Shortlist Talent');
+    expect(checklist.textContent).toContain('✓ Move Hire Status');
+    expect(checklist.textContent).toContain('✓ Open Detail Drawer');
+    expect(checklist.textContent).toContain('✓ Export Data');
+  });
+
   test('supports deterministic seed control scenarios', async () => {
     render(<App />);
 

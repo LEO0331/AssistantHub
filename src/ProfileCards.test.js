@@ -6,15 +6,19 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ProfileCards from './ProfileCards';
 import ContactModal from './ContactModal';
+import { MapContainer } from 'react-leaflet';
 
 jest.mock('./ContactModal', () =>
   jest.fn(({ isActive, onSubmit }) => (
     <div>
       ContactModal
       {isActive && (
-        <button type="button" onClick={() => onSubmit('hello from modal')}>
-          Trigger Modal Submit
-        </button>
+        <>
+          <button type="button" onClick={() => onSubmit('hello from modal')}>
+            Trigger Modal Submit
+          </button>
+          <button type="button">Close Modal</button>
+        </>
       )}
     </div>
   ))
@@ -93,7 +97,14 @@ describe('ProfileCards', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open contact form for John Doe' }));
 
     expect(ContactModal).toHaveBeenCalledWith(
-      expect.objectContaining({ isActive: true }),
+      expect.objectContaining({
+        isActive: true,
+        user: expect.objectContaining({
+          name: 'John Doe',
+          email: 'john@example.com',
+          phone: '123-456-7890',
+        }),
+      }),
       expect.anything()
     );
   });
@@ -110,6 +121,20 @@ describe('ProfileCards', () => {
       phone: '123-456-7890',
       message: 'hello from modal',
     });
+  });
+
+  test('passes onClose callback to ContactModal', () => {
+    render(<ProfileCards {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open contact form for John Doe' }));
+
+    const latestCall = ContactModal.mock.calls[ContactModal.mock.calls.length - 1][0];
+    act(() => {
+      latestCall.onClose();
+    });
+
+    const afterClose = ContactModal.mock.calls[ContactModal.mock.calls.length - 1][0];
+    expect(afterClose.isActive).toBe(false);
   });
 
   test('disables shortlist button when already added', () => {
@@ -139,9 +164,26 @@ describe('ProfileCards', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Show location for John Doe' }));
     expect(screen.getByText(/MapContainer/)).toBeInTheDocument();
+    expect(MapContainer).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        center: [40.7128, -74.006],
+        zoom: 5,
+      }),
+      expect.anything()
+    );
 
     fireEvent.click(screen.getAllByText('Close')[0]);
     expect(screen.queryByText(/MapContainer/)).not.toBeInTheDocument();
+  });
+
+  test('closes map modal from backdrop click', () => {
+    const { container } = render(<ProfileCards {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show location for John Doe' }));
+    expect(screen.getByRole('dialog', { name: 'Assistant location' })).toBeInTheDocument();
+
+    fireEvent.click(container.querySelector('.modal-background'));
+    expect(screen.queryByRole('dialog', { name: 'Assistant location' })).not.toBeInTheDocument();
   });
 
   test('shows copied status for email copy action', () => {
