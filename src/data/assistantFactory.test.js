@@ -1,4 +1,4 @@
-﻿/* eslint-disable no-undef */
+/* eslint-disable no-undef */
 import { generateAssistants } from './assistantFactory';
 
 describe('assistantFactory', () => {
@@ -33,9 +33,9 @@ describe('assistantFactory', () => {
     expect(assistant.skills.length).toBeGreaterThanOrEqual(2);
   });
 
-  test('clamps to 10 assistants', () => {
-    const assistants = generateAssistants(99);
-    expect(assistants).toHaveLength(10);
+  test('supports large pool size and clamps at 5000 assistants', () => {
+    const assistants = generateAssistants(5001);
+    expect(assistants).toHaveLength(5000);
   });
 
   test('supports deterministic custom seed', () => {

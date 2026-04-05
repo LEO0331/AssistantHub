@@ -1,4 +1,4 @@
-﻿/* eslint-disable no-undef */
+/* eslint-disable no-undef */
 /* eslint-disable react/display-name */
 /* eslint-disable react/prop-types */
 import React from 'react';
@@ -76,6 +76,22 @@ describe('App integration', () => {
 
     await waitFor(() => {
       expect(screen.getAllByRole('button', { name: /Open contact form for/i }).length).toBe(1);
+    });
+  });
+
+  test('handles large pool mode with pagination summary', async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByText('Load 500'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Showing 24 of 500 talents/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Next'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/page 2\/21/)).toBeInTheDocument();
     });
   });
 

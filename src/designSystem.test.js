@@ -1,4 +1,4 @@
-﻿/* eslint-disable no-undef */
+/* eslint-disable no-undef */
 import {
   DESIGN_BREAKPOINTS,
   getDesignTier,

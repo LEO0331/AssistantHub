@@ -1,4 +1,4 @@
-﻿/* eslint-disable no-undef */
+/* eslint-disable no-undef */
 import { renderHook, act } from '@testing-library/react';
 import { usePersistentState } from './usePersistentState';
 

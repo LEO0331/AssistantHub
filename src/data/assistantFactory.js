@@ -1,6 +1,7 @@
-﻿import { faker } from '@faker-js/faker';
+import { faker } from '@faker-js/faker';
 
 const BASE_SEED = 7331;
+const MAX_GENERATED_ASSISTANTS = 5000;
 
 export const TALENT_ROLES = [
   'Executive Assistant',
@@ -33,7 +34,7 @@ const clampCount = (count) => {
   if (!Number.isFinite(normalized) || normalized < 0) {
     return 0;
   }
-  return Math.min(Math.floor(normalized), 10);
+  return Math.min(Math.floor(normalized), MAX_GENERATED_ASSISTANTS);
 };
 
 const toCoordinate = (value) => Number.parseFloat(value.toFixed(6));

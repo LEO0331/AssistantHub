@@ -1,4 +1,4 @@
-﻿/* eslint-disable react/prop-types */
+/* eslint-disable react/prop-types */
 import React, { useState } from 'react';
 import ContactModal from './ContactModal';
 import QRCode from 'react-qr-code';
@@ -60,7 +60,7 @@ function ProfileCards({
           </button>
           <p className="talent-role">{assistant.role}</p>
           <p className="talent-meta">
-            {assistant.availability} · ${assistant.hourlyRateUsd}/hr
+            {assistant.availability} 繚 ${assistant.hourlyRateUsd}/hr
           </p>
           <p className="status-chip">Hire Status: {hireStatus}</p>
           <div className="qr-row">

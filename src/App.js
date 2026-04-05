@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { CSVLink } from 'react-csv';
 import Chatbot from 'react-chatbot-kit';
 import 'react-chatbot-kit/build/main.css';
@@ -12,8 +12,9 @@ import { usePersistentState } from './hooks/usePersistentState';
 import { initialUiState, RATE_FILTERS, SORT_OPTIONS, uiReducer } from './state/uiReducer';
 import './App.css';
 
-const MAX_CARDS = 10;
+const MAX_CARDS = 5000;
 const DEFAULT_CARDS = 6;
+const DEFAULT_PAGE_SIZE = 24;
 const SHORTLIST_STORAGE_KEY = 'talentShortlist';
 const TALENT_SEED_KEY = 'talentSeed';
 const HIRE_STATUSES = ['New', 'Contacted', 'Interview', 'Hired'];
@@ -62,6 +63,7 @@ const readJsonFile = (file) => {
 function App() {
   const [assistants, setAssistants] = useState([]);
   const [numberOfCards, setNumberOfCards] = useState(DEFAULT_CARDS);
+  const [currentPage, setCurrentPage] = useState(1);
   const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
   const [shortlistedTalent, setShortlistedTalent] = usePersistentState(SHORTLIST_STORAGE_KEY, []);
   const [seed, setSeed] = usePersistentState(TALENT_SEED_KEY, BASE_SEED);
@@ -129,6 +131,14 @@ function App() {
     uiState.sortOrder,
   ]);
 
+  const totalPages = Math.max(1, Math.ceil(visibleAssistants.length / DEFAULT_PAGE_SIZE));
+
+  const pagedAssistants = useMemo(() => {
+    const safePage = Math.min(currentPage, totalPages);
+    const start = (safePage - 1) * DEFAULT_PAGE_SIZE;
+    return visibleAssistants.slice(start, start + DEFAULT_PAGE_SIZE);
+  }, [visibleAssistants, currentPage, totalPages]);
+
   const selectedTalent = useMemo(
     () => assistants.find((assistant) => assistant.id === uiState.selectedTalentId) || null,
     [assistants, uiState.selectedTalentId]
@@ -137,14 +147,17 @@ function App() {
   const handleInputChange = (event) => {
     const next = Math.min(Math.max(Number(event.target.value) || 0, 0), MAX_CARDS);
     setNumberOfCards(next);
+    setCurrentPage(1);
   };
 
   const handleAddCard = () => {
-    setNumberOfCards((previous) => Math.min(previous + 1, MAX_CARDS));
+    setNumberOfCards((previous) => Math.min(previous + (previous >= 100 ? 25 : 1), MAX_CARDS));
+    setCurrentPage(1);
   };
 
   const handleMinusCard = () => {
-    setNumberOfCards((previous) => Math.max(previous - 1, 0));
+    setNumberOfCards((previous) => Math.max(previous - (previous > 100 ? 25 : 1), 0));
+    setCurrentPage(1);
   };
 
   const handleLikeClick = (id) => {
@@ -198,8 +211,19 @@ function App() {
     const nextSeed = Number(event.target.value);
     if (Number.isFinite(nextSeed)) {
       setSeed(nextSeed);
+      setCurrentPage(1);
     }
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [uiState.searchTerm, uiState.selectedRole, uiState.selectedAvailability, uiState.selectedRate, uiState.sortOrder]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleExportJson = () => {
     const payload = {
@@ -290,6 +314,13 @@ function App() {
                 -
               </button>
             </div>
+
+            <button className="ui-button dark" onClick={() => { setNumberOfCards(500); setCurrentPage(1); }}>
+              Load 500
+            </button>
+            <button className="ui-button dark" onClick={() => { setNumberOfCards(2000); setCurrentPage(1); }}>
+              Load 2000
+            </button>
 
             <SearchBar
               value={uiState.searchTerm}
@@ -406,11 +437,16 @@ function App() {
         </section>
 
         <section className="cards-section" aria-label="Talent profiles">
+          {!uiState.isLoading && visibleAssistants.length > 0 && (
+            <div className="result-summary">
+              Showing {pagedAssistants.length} of {visibleAssistants.length} talents (page {currentPage}/{totalPages})
+            </div>
+          )}
           {uiState.isLoading ? (
             <p className="loading-state">Refreshing talent pool...</p>
-          ) : visibleAssistants.length > 0 ? (
+          ) : pagedAssistants.length > 0 ? (
             <div className="cards-grid">
-              {visibleAssistants.map((assistant, index) => (
+              {pagedAssistants.map((assistant, index) => (
                 <ProfileCards
                   key={assistant.id}
                   assistant={assistant}
@@ -426,6 +462,24 @@ function App() {
             </div>
           ) : (
             renderEmptyState()
+          )}
+          {!uiState.isLoading && visibleAssistants.length > DEFAULT_PAGE_SIZE && (
+            <div className="pagination-bar">
+              <button
+                className="ui-button secondary"
+                onClick={() => setCurrentPage((previous) => Math.max(previous - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </button>
+              <button
+                className="ui-button secondary"
+                onClick={() => setCurrentPage((previous) => Math.min(previous + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </button>
+            </div>
           )}
         </section>
       </main>

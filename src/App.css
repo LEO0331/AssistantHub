@@ -185,6 +185,12 @@
   margin-top: calc(var(--section-space) * 0.4);
 }
 
+.result-summary {
+  margin-bottom: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -322,6 +328,12 @@
   padding: var(--panel-padding);
   background: var(--bg-ivory);
   color: var(--text-secondary);
+}
+
+.pagination-bar {
+  margin-top: var(--space-3);
+  display: flex;
+  gap: var(--space-1);
 }
 
 .modal {
