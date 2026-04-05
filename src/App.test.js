@@ -48,6 +48,33 @@ describe('App integration', () => {
     });
   });
 
+  test('runs one-click demo scenario preset', async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByText('Run Demo Scenario'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
+      expect(screen.getByLabelText('Deterministic seed')).toHaveValue(424242);
+      expect(screen.getByLabelText('Data source')).toHaveValue('mock-api');
+      expect(screen.getByText(/Demo scenario loaded/i)).toBeInTheDocument();
+    });
+  });
+
+  test('applies URL preset when demo=true', async () => {
+    window.history.pushState({}, '', '/?demo=true');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
+      expect(screen.getByLabelText('Deterministic seed')).toHaveValue(424242);
+      expect(screen.getByLabelText('Data source')).toHaveValue('mock-api');
+      expect(screen.getByText('Demo scenario loaded from URL preset.')).toBeInTheDocument();
+    });
+
+    window.history.pushState({}, '', '/');
+  });
+
   test('supports deterministic seed control scenarios', async () => {
     render(<App />);
 

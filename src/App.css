@@ -230,6 +230,27 @@
   margin-top: calc(var(--section-space) * 0.4);
 }
 
+.demo-checklist {
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-md);
+  background: var(--bg-ivory);
+  padding: 10px 12px;
+  margin-bottom: var(--space-2);
+}
+
+.checklist-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}
+
+.checklist-row .done {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 .result-summary {
   margin-bottom: var(--space-2);
   color: var(--text-secondary);

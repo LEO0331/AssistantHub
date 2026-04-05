@@ -25,6 +25,8 @@ export const DEFAULT_IMPORT_MAX_BYTES = 1024 * 1024 * 2;
 const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
 const TABLE_ROW_HEIGHT = 54;
 const TABLE_VIEWPORT_HEIGHT = 432;
+const DEMO_SCENARIO_SEED = 424242;
+const DEMO_SCENARIO_COUNT = 500;
 
 const RATE_CHIPS = [
   { value: RATE_FILTERS.ALL, label: 'All rates' },
@@ -170,8 +172,10 @@ function App() {
   const [controlStatus, setControlStatus] = useState('');
   const [viewMode, setViewMode] = useState('cards');
   const [tableScrollTop, setTableScrollTop] = useState(0);
+  const [demoProgress, setDemoProgress] = useState({ viewedDetail: false, exportedData: false });
   const importInputRef = useRef(null);
   const tableViewportRef = useRef(null);
+  const didApplyUrlDemoRef = useRef(false);
   const debouncedSearchTerm = useDebouncedValue(uiState.searchTerm.trim().toLowerCase(), 180);
 
   useEffect(() => {
@@ -388,6 +392,7 @@ function App() {
     anchor.click();
     URL.revokeObjectURL(url);
     setJsonStatus('Demo data exported.');
+    setDemoProgress((previous) => ({ ...previous, exportedData: true }));
   };
 
   const handleImportJson = async (event) => {
@@ -431,10 +436,41 @@ function App() {
     setPageSize(DEFAULT_PAGE_SIZE);
     setViewMode('cards');
     setTableScrollTop(0);
+    setDemoProgress({ viewedDetail: false, exportedData: false });
     setJsonStatus('Demo data reset to defaults.');
     setControlStatus('');
     dispatchUi({ type: 'resetFilters' });
   };
+
+  const runDemoScenario = (fromUrl = false) => {
+    setShortlistedTalent([]);
+    setSentInquiries([]);
+    setSeed(DEMO_SCENARIO_SEED);
+    setTalentSource(TALENT_SOURCES.MOCK_API);
+    setNumberOfCards(DEMO_SCENARIO_COUNT);
+    setCurrentPage(1);
+    setPageSize(DEFAULT_PAGE_SIZE);
+    setViewMode('cards');
+    setTableScrollTop(0);
+    setDemoProgress({ viewedDetail: false, exportedData: false });
+    dispatchUi({ type: 'resetFilters' });
+    setControlStatus(
+      fromUrl
+        ? 'Demo scenario loaded from URL preset.'
+        : 'Demo scenario loaded. Try: filter -> shortlist -> advance status -> export.'
+    );
+  };
+
+  useEffect(() => {
+    if (didApplyUrlDemoRef.current) {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === 'true') {
+      didApplyUrlDemoRef.current = true;
+      runDemoScenario(true);
+    }
+  }, []);
 
   const tableVirtualRows = useMemo(() => {
     const source = visibleAssistants;
@@ -581,6 +617,9 @@ function App() {
             <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'toggleHelpModal' })}>
               Help
             </button>
+            <button className="ui-button terracotta" onClick={() => runDemoScenario(false)}>
+              Run Demo Scenario
+            </button>
             <button className="ui-button secondary" onClick={handleResetDemoData}>
               Reset Demo Data
             </button>
@@ -657,6 +696,53 @@ function App() {
         </section>
 
         <section className="cards-section" aria-label="Talent profiles">
+          <section className="demo-checklist" aria-label="Presenter checklist">
+            <p className="chip-label">Demo Checklist</p>
+            <div className="checklist-row">
+              <span className={numberOfCards >= DEMO_SCENARIO_COUNT ? 'done' : ''}>
+                {numberOfCards >= DEMO_SCENARIO_COUNT ? '✓' : '○'} Load 500+
+              </span>
+              <span
+                className={
+                  uiState.searchTerm.trim() ||
+                  uiState.selectedRole !== 'all' ||
+                  uiState.selectedAvailability !== 'all' ||
+                  uiState.selectedRate !== RATE_FILTERS.ALL
+                    ? 'done'
+                    : ''
+                }
+              >
+                {uiState.searchTerm.trim() ||
+                uiState.selectedRole !== 'all' ||
+                uiState.selectedAvailability !== 'all' ||
+                uiState.selectedRate !== RATE_FILTERS.ALL
+                  ? '✓'
+                  : '○'}{' '}
+                Filter/Search
+              </span>
+              <span className={shortlistedTalent.length > 0 ? 'done' : ''}>
+                {shortlistedTalent.length > 0 ? '✓' : '○'} Shortlist Talent
+              </span>
+              <span
+                className={
+                  shortlistedTalent.some((talent) => (talent.hireStatus || HIRE_STATUSES[0]) !== HIRE_STATUSES[0])
+                    ? 'done'
+                    : ''
+                }
+              >
+                {shortlistedTalent.some((talent) => (talent.hireStatus || HIRE_STATUSES[0]) !== HIRE_STATUSES[0])
+                  ? '✓'
+                  : '○'}{' '}
+                Move Hire Status
+              </span>
+              <span className={demoProgress.viewedDetail ? 'done' : ''}>
+                {demoProgress.viewedDetail ? '✓' : '○'} Open Detail Drawer
+              </span>
+              <span className={demoProgress.exportedData ? 'done' : ''}>
+                {demoProgress.exportedData ? '✓' : '○'} Export Data
+              </span>
+            </div>
+          </section>
           {!uiState.isLoading && visibleAssistants.length > 0 && (
             <div className="result-summary">
               {viewMode === 'cards'
@@ -675,7 +761,10 @@ function App() {
                     assistant={assistant}
                     onLikeClick={() => handleLikeClick(assistant.id)}
                     onAddClick={() => handleAddUser(assistant)}
-                    onViewDetails={() => dispatchUi({ type: 'openDrawer', payload: assistant.id })}
+                    onViewDetails={() => {
+                      dispatchUi({ type: 'openDrawer', payload: assistant.id });
+                      setDemoProgress((previous) => ({ ...previous, viewedDetail: true }));
+                    }}
                     isAdded={shortlistedTalent.some((user) => user.id === assistant.id)}
                     hireStatus={getTalentHireStatus(assistant.id)}
                     onInquirySubmit={handleInquirySubmit}
@@ -736,7 +825,10 @@ function App() {
                               </button>
                               <button
                                 className="ui-button secondary small"
-                                onClick={() => dispatchUi({ type: 'openDrawer', payload: assistant.id })}
+                                onClick={() => {
+                                  dispatchUi({ type: 'openDrawer', payload: assistant.id });
+                                  setDemoProgress((previous) => ({ ...previous, viewedDetail: true }));
+                                }}
                               >
                                 Detail
                               </button>
