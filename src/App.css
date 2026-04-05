@@ -197,6 +197,41 @@
   gap: var(--cards-gap);
 }
 
+.table-shell {
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-lg);
+  background: var(--bg-ivory);
+  overflow: auto;
+}
+
+.talent-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+.talent-table th,
+.talent-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-cream);
+  color: var(--text-dark-warm);
+  font-size: 0.92rem;
+  vertical-align: middle;
+}
+
+.talent-table th {
+  font-family: 'Anthropic Serif', Georgia, serif;
+  font-weight: 500;
+  background: #fff;
+}
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .profile-card {
   border: 1px solid var(--border-cream);
   border-radius: var(--radius-lg);

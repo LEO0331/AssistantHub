@@ -95,6 +95,21 @@ describe('App integration', () => {
     });
   });
 
+  test('supports 5000 stress load and list mode', async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByText('Load 5000'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Showing 24 of 5000 talents/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('List Mode'));
+
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('Card Mode')).toBeInTheDocument();
+  });
+
   test('supports shortlist status pipeline', async () => {
     render(<App />);
 

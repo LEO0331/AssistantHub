@@ -69,6 +69,7 @@ function App() {
   const [seed, setSeed] = usePersistentState(TALENT_SEED_KEY, BASE_SEED);
   const [sentInquiries, setSentInquiries] = useState([]);
   const [jsonStatus, setJsonStatus] = useState('');
+  const [viewMode, setViewMode] = useState('cards');
   const importInputRef = useRef(null);
 
   useEffect(() => {
@@ -321,6 +322,9 @@ function App() {
             <button className="ui-button dark" onClick={() => { setNumberOfCards(2000); setCurrentPage(1); }}>
               Load 2000
             </button>
+            <button className="ui-button dark" onClick={() => { setNumberOfCards(5000); setCurrentPage(1); }}>
+              Load 5000
+            </button>
 
             <SearchBar
               value={uiState.searchTerm}
@@ -370,6 +374,12 @@ function App() {
             </button>
             <button className="ui-button secondary" onClick={() => importInputRef.current?.click()}>
               Import JSON
+            </button>
+            <button
+              className="ui-button secondary"
+              onClick={() => setViewMode((previous) => (previous === 'cards' ? 'table' : 'cards'))}
+            >
+              {viewMode === 'cards' ? 'List Mode' : 'Card Mode'}
             </button>
             <input
               ref={importInputRef}
@@ -445,21 +455,65 @@ function App() {
           {uiState.isLoading ? (
             <p className="loading-state">Refreshing talent pool...</p>
           ) : pagedAssistants.length > 0 ? (
-            <div className="cards-grid">
-              {pagedAssistants.map((assistant, index) => (
-                <ProfileCards
-                  key={assistant.id}
-                  assistant={assistant}
-                  onLikeClick={() => handleLikeClick(assistant.id)}
-                  onAddClick={() => handleAddUser(assistant)}
-                  onViewDetails={() => dispatchUi({ type: 'openDrawer', payload: assistant.id })}
-                  isAdded={shortlistedTalent.some((user) => user.id === assistant.id)}
-                  hireStatus={getTalentHireStatus(assistant.id)}
-                  onInquirySubmit={handleInquirySubmit}
-                  animationDelay={index * 40}
-                />
-              ))}
-            </div>
+            viewMode === 'cards' ? (
+              <div className="cards-grid">
+                {pagedAssistants.map((assistant, index) => (
+                  <ProfileCards
+                    key={assistant.id}
+                    assistant={assistant}
+                    onLikeClick={() => handleLikeClick(assistant.id)}
+                    onAddClick={() => handleAddUser(assistant)}
+                    onViewDetails={() => dispatchUi({ type: 'openDrawer', payload: assistant.id })}
+                    isAdded={shortlistedTalent.some((user) => user.id === assistant.id)}
+                    hireStatus={getTalentHireStatus(assistant.id)}
+                    onInquirySubmit={handleInquirySubmit}
+                    animationDelay={index * 40}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="table-shell">
+                <table className="talent-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>Availability</th>
+                      <th>Rate</th>
+                      <th>Likes</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedAssistants.map((assistant) => (
+                      <tr key={assistant.id}>
+                        <td>{assistant.name}</td>
+                        <td>{assistant.role}</td>
+                        <td>{assistant.availability}</td>
+                        <td>${assistant.hourlyRateUsd}/hr</td>
+                        <td>{assistant.likes}</td>
+                        <td>{getTalentHireStatus(assistant.id)}</td>
+                        <td className="table-actions">
+                          <button className="ui-button secondary small" onClick={() => handleLikeClick(assistant.id)}>
+                            Like
+                          </button>
+                          <button className="ui-button secondary small" onClick={() => handleAddUser(assistant)}>
+                            {shortlistedTalent.some((user) => user.id === assistant.id) ? 'Shortlisted' : 'Shortlist'}
+                          </button>
+                          <button
+                            className="ui-button secondary small"
+                            onClick={() => dispatchUi({ type: 'openDrawer', payload: assistant.id })}
+                          >
+                            Detail
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           ) : (
             renderEmptyState()
           )}
