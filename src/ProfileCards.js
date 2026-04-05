@@ -1,150 +1,141 @@
 /* eslint-disable react/prop-types */
-/* eslint-disable react/react-in-jsx-scope */
-import ContactModal from './ContactModal'; 
-import QRCode from 'react-qr-code';
 import React, { useState } from 'react';
-import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import markerIconPng from "leaflet/dist/images/marker-icon.png";
-import {Icon} from 'leaflet';
+import ContactModal from './ContactModal';
+import QRCode from 'react-qr-code';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
+import { Icon } from 'leaflet';
+import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import markerIconPng from 'leaflet/dist/images/marker-icon.png';
 
-function ProfileCards(props) {
-  const {name, email, imageUrl, cell, country, likes, onLikeClick, onAddClick, isAdded, onInquirySubmit, location} = props;
+const markerIcon = new Icon({
+  iconUrl: markerIconPng,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 
-  const [isModalActive, setIsModalActive] = useState(false);
+function ProfileCards({ assistant, onLikeClick, onAddClick, isAdded, onInquirySubmit }) {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const [copyStatus, setCopyStatus] = useState({ email: false, cell: false });
-
-  const handleNameClick = () => {
-    setIsModalActive(true);
-  };
-
-  const closeModal = () => {
-    setIsModalActive(false);
-  };
+  const [copyStatus, setCopyStatus] = useState({ email: false, phone: false });
 
   const handleSubmit = (message) => {
-    onInquirySubmit({ name, email, cell, message });
-    closeModal();
-  };
-
-  const handleLocationClick = () => {
-    setIsMapModalOpen(true);
-  };
-
-  const handleCloseMapModal = () => {
-    setIsMapModalOpen(false);
+    onInquirySubmit({
+      name: assistant.name,
+      email: assistant.email,
+      phone: assistant.phone,
+      message,
+    });
+    setIsContactModalOpen(false);
   };
 
   const handleCopy = (type) => {
-    setCopyStatus({ ...copyStatus, [type]: true });
+    setCopyStatus((previous) => ({ ...previous, [type]: true }));
     setTimeout(() => {
-      setCopyStatus({ ...copyStatus, [type]: false });
+      setCopyStatus((previous) => ({ ...previous, [type]: false }));
     }, 2000);
   };
-  
-  return(
-    <div className="card">
-      <div className="card-content">
-        <div className="media">
-          <div className="media-left">
-            <figure className="image is-72x72">
-              <img alt="images" src={imageUrl} />
-            </figure>
+
+  return (
+    <article className="profile-card">
+      <div className="card-head">
+        <img alt={`${assistant.name} avatar`} src={assistant.avatarUrl} className="avatar" />
+        <div>
+          <button
+            type="button"
+            className="name-button"
+            onClick={() => setIsContactModalOpen(true)}
+            aria-label={`Open contact form for ${assistant.name}`}
+          >
+            {assistant.name}
+          </button>
+          <div className="qr-row">
+            <QRCode value={assistant.phone} size={34} />
           </div>
-          <div className="media-content">
-            <p className="title is-2" onClick={handleNameClick} style={{ cursor: 'pointer' }}>
-              {name}
-            </p>
-            <p className="subtitle">
-              <QRCode value={cell} size={30} />
-            </p>
-            <p className="title is-4">
-              <span className="icon mr-1" onClick={onLikeClick} style={{ cursor: 'pointer' }}>
-                <i className="fa fa-thumbs-up" aria-hidden="true"></i> 
-              </span>
-              {likes} {likes === 0 ? 'Like' : likes === 1 ? 'Like' : 'Likes'}
-            </p>
-            <p className="subtitle">
-              <span className="icon mr-1" onClick={handleLocationClick} style={{ cursor: 'pointer' }}>
-                <i className="fa fa-map-marker" aria-hidden="true"></i> 
-              </span>
-              {country}
-            </p>
-          </div>
-        </div>
-        <div className="content">
-        <p>Please feel free and do not hestitate to contact me at</p> 
-        <p>
-          <strong>{email}</strong> 
-            <CopyToClipboard text={email} onCopy={() => handleCopy('email')}>
-              <button className="ml-2">
-                <span className="icon">
-                  <i className="fa fa-copy"></i>
-                </span>
-                <span>{copyStatus.email ? 'Copied!' : 'Copy'}</span>
-              </button>
-            </CopyToClipboard>
-        </p>
-        <p>
-          <strong>{cell}</strong> 
-            <CopyToClipboard text={cell} onCopy={() => handleCopy('cell')}>
-              <button className="ml-2">
-                <span className="icon">
-                  <i className="fa fa-copy"></i>
-                </span>
-                <span>{copyStatus.cell ? 'Copied!' : 'Copy'}</span>
-              </button>
-            </CopyToClipboard>
-        </p>
         </div>
       </div>
-      <footer className="card-footer">
+
+      <div className="stat-row">
         <button
-          className="button is-link card-footer-item"
-          onClick={onAddClick}
-          disabled={isAdded}
+          type="button"
+          className="icon-button"
+          onClick={onLikeClick}
+          aria-label={`Like ${assistant.name}`}
         >
-          {isAdded ? 'Added' : 'Add'}
+          <i className="fa fa-thumbs-up" aria-hidden="true"></i>
         </button>
-      </footer>
+        <span>{assistant.likes} Likes</span>
+      </div>
+
+      <div className="stat-row">
+        <button
+          type="button"
+          className="icon-button"
+          onClick={() => setIsMapModalOpen(true)}
+          aria-label={`Show location for ${assistant.name}`}
+        >
+          <i className="fa fa-map-marker" aria-hidden="true"></i>
+        </button>
+        <span>{assistant.country}</span>
+      </div>
+
+      <div className="contact-copy">
+        <p>Reach out anytime:</p>
+        <div className="copy-row">
+          <strong>{assistant.email}</strong>
+          <CopyToClipboard text={assistant.email} onCopy={() => handleCopy('email')}>
+            <button type="button" className="ui-button secondary small">
+              {copyStatus.email ? 'Copied!' : 'Copy'}
+            </button>
+          </CopyToClipboard>
+        </div>
+        <div className="copy-row">
+          <strong>{assistant.phone}</strong>
+          <CopyToClipboard text={assistant.phone} onCopy={() => handleCopy('phone')}>
+            <button type="button" className="ui-button secondary small">
+              {copyStatus.phone ? 'Copied!' : 'Copy'}
+            </button>
+          </CopyToClipboard>
+        </div>
+      </div>
+
+      <button type="button" className="ui-button terracotta add-button" onClick={onAddClick} disabled={isAdded}>
+        {isAdded ? 'Added' : 'Add'}
+      </button>
+
       <ContactModal
-        isActive={isModalActive}
-        onClose={closeModal}
-        user={{ name, email, cell }}
+        isActive={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        user={{ name: assistant.name, email: assistant.email, phone: assistant.phone }}
         onSubmit={handleSubmit}
       />
-      {/* Modal for Map - lat and long is random not match */}
+
       {isMapModalOpen && (
-        <div className="modal is-active">
-          <div className="modal-background" onClick={handleCloseMapModal}></div>
-          <div className="modal-content">
-            <div className="box">
-              <h2 className="title">Location</h2>
-              <MapContainer
-                center={[location.coordinates.latitude, location.coordinates.longitude]}
-                zoom={10}
-                style={{ height: '300px', width: '100%' }}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                <Marker position={[location.coordinates.latitude, location.coordinates.longitude]} icon={new Icon({iconUrl: markerIconPng, iconSize: [25, 41], iconAnchor: [12, 41]})}>
-                  <Popup>
-                    Location: {country}
-                  </Popup>
-                </Marker>
-              </MapContainer>
-              <button className="button is-danger mt-3" onClick={handleCloseMapModal}>Close</button>
-            </div>
+        <div className="modal is-active" role="dialog" aria-modal="true" aria-label="Assistant location">
+          <div className="modal-background" onClick={() => setIsMapModalOpen(false)}></div>
+          <div className="modal-content modal-box">
+            <h2>Location</h2>
+            <MapContainer
+              center={[Number(assistant.coordinates.lat), Number(assistant.coordinates.lng)]}
+              zoom={5}
+              style={{ height: '320px', width: '100%' }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              <Marker position={[Number(assistant.coordinates.lat), Number(assistant.coordinates.lng)]} icon={markerIcon}>
+                <Popup>{assistant.country}</Popup>
+              </Marker>
+            </MapContainer>
+            <button type="button" className="ui-button secondary" onClick={() => setIsMapModalOpen(false)}>
+              Close
+            </button>
           </div>
-          <button className="modal-close is-large" aria-label="close" onClick={handleCloseMapModal}></button>
         </div>
       )}
-    </div>
-  )
+    </article>
+  );
 }
 
 export default ProfileCards;

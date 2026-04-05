@@ -1,48 +1,63 @@
 /* eslint-disable react/prop-types */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const ContactModal = ({ isActive, onClose, onSubmit, user }) => {
   const [inquiry, setInquiry] = useState('');
+  const [isSent, setIsSent] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    alert(`Inquiry sent to ${user.name}: ${inquiry}`);
-    onSubmit(inquiry); // Send the message to the parent component
+  useEffect(() => {
+    if (!isActive) {
+      setInquiry('');
+      setIsSent(false);
+    }
+  }, [isActive]);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSubmit(inquiry);
     setInquiry('');
-    onClose(); // Close the modal after sending the inquiry
+    setIsSent(true);
+    onClose();
   };
 
   return (
-    <div className={`modal ${isActive ? 'is-active' : ''}`}>
+    <div className={`modal ${isActive ? 'is-active' : ''}`} role="dialog" aria-modal="true" aria-label="Contact modal">
       <div className="modal-background" onClick={onClose}></div>
-      <div className="modal-card">
-        <header className="modal-card-head">
-          <p className="modal-card-title">Contact {user.name}</p>
-          <button className="delete" aria-label="close" onClick={onClose}></button>
-        </header>
-        <section className="modal-card-body">
-          <p><strong>Name:</strong> {user.name}</p>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Phone:</strong> {user.cell}</p>
-          <form onSubmit={handleSubmit}>
-            <div className="field">
-              <label className="label">Inquiry:</label>
-              <div className="control">
-                <textarea
-                  className="textarea"
-                  value={inquiry}
-                  onChange={(e) => setInquiry(e.target.value)}
-                  placeholder="Please write your inquiry here..."
-                  required
-                ></textarea>
-              </div>
-            </div>
-            <footer className="modal-card-foot">
-              <button type="submit" className="button is-success mr-1">Send</button>
-              <button type="button" className="button" onClick={onClose}>Cancel</button>
-            </footer>
-          </form>
-        </section>
+      <div className="modal-content modal-box">
+        <h2>Contact {user.name}</h2>
+        <p>
+          <strong>Name:</strong> {user.name}
+        </p>
+        <p>
+          <strong>Email:</strong> {user.email}
+        </p>
+        <p>
+          <strong>Phone:</strong> {user.phone}
+        </p>
+
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="inquiry" className="panel-label">
+            Inquiry
+          </label>
+          <textarea
+            id="inquiry"
+            className="text-area"
+            value={inquiry}
+            onChange={(event) => setInquiry(event.target.value)}
+            placeholder="Please write your inquiry here..."
+            required
+          ></textarea>
+
+          <div className="modal-actions">
+            <button type="submit" className="ui-button terracotta">
+              Send
+            </button>
+            <button type="button" className="ui-button secondary" onClick={onClose}>
+              Cancel
+            </button>
+          </div>
+        </form>
+        {isSent && <p className="success-note">Inquiry sent successfully.</p>}
       </div>
     </div>
   );

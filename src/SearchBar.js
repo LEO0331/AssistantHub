@@ -4,11 +4,12 @@ import React from 'react';
 const SearchBar = ({ value, onChange }) => {
   return (
     <input
-      className="input is-info"
+      className="input-control"
       type="text"
       placeholder="Search by name..."
       value={value}
       onChange={onChange}
+      aria-label="Search assistants by name"
     />
   );
 };
