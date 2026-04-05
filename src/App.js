@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { CSVLink } from 'react-csv';
 import Chatbot from 'react-chatbot-kit';
 import 'react-chatbot-kit/build/main.css';
@@ -7,59 +7,132 @@ import SearchBar from './SearchBar';
 import config from './ChatbotConfig';
 import MessageParser from './MessageParser';
 import ActionProvider from './ActionProvider';
-import { generateAssistants } from './data/assistantFactory';
+import { AVAILABILITY_OPTIONS, BASE_SEED, generateAssistants, TALENT_ROLES } from './data/assistantFactory';
+import { usePersistentState } from './hooks/usePersistentState';
+import { initialUiState, RATE_FILTERS, SORT_OPTIONS, uiReducer } from './state/uiReducer';
 import './App.css';
 
 const MAX_CARDS = 10;
-const STORAGE_KEY = 'addedUsers';
+const DEFAULT_CARDS = 6;
+const SHORTLIST_STORAGE_KEY = 'talentShortlist';
+const TALENT_SEED_KEY = 'talentSeed';
+const HIRE_STATUSES = ['New', 'Contacted', 'Interview', 'Hired'];
 
-const parseStoredUsers = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
+const RATE_CHIPS = [
+  { value: RATE_FILTERS.ALL, label: 'All rates' },
+  { value: RATE_FILTERS.UNDER_40, label: 'Under $40/hr' },
+  { value: RATE_FILTERS.BETWEEN_40_60, label: '$40-$60/hr' },
+  { value: RATE_FILTERS.OVER_60, label: '$60+/hr' },
+];
 
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+const isRateMatch = (rate, filter) => {
+  if (filter === RATE_FILTERS.UNDER_40) {
+    return rate < 40;
   }
+  if (filter === RATE_FILTERS.BETWEEN_40_60) {
+    return rate >= 40 && rate <= 60;
+  }
+  if (filter === RATE_FILTERS.OVER_60) {
+    return rate > 60;
+  }
+  return true;
+};
+
+const getNextStatus = (currentStatus) => {
+  const index = HIRE_STATUSES.indexOf(currentStatus);
+  if (index < 0 || index === HIRE_STATUSES.length - 1) {
+    return HIRE_STATUSES[0];
+  }
+  return HIRE_STATUSES[index + 1];
+};
+
+const readJsonFile = (file) => {
+  if (typeof file.text === 'function') {
+    return file.text();
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
 };
 
 function App() {
   const [assistants, setAssistants] = useState([]);
-  const [numberOfCards, setNumberOfCards] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortOrder, setSortOrder] = useState('highToLow');
-  const [addedUsers, setAddedUsers] = useState(parseStoredUsers);
-  const [isAddedModalOpen, setIsAddedModalOpen] = useState(false);
+  const [numberOfCards, setNumberOfCards] = useState(DEFAULT_CARDS);
+  const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
+  const [shortlistedTalent, setShortlistedTalent] = usePersistentState(SHORTLIST_STORAGE_KEY, []);
+  const [seed, setSeed] = usePersistentState(TALENT_SEED_KEY, BASE_SEED);
   const [sentInquiries, setSentInquiries] = useState([]);
-  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
-  const [isChatbotVisible, setIsChatbotVisible] = useState(false);
+  const [jsonStatus, setJsonStatus] = useState('');
+  const importInputRef = useRef(null);
 
   useEffect(() => {
-    setAssistants(generateAssistants(numberOfCards));
-  }, [numberOfCards]);
+    let isMounted = true;
+    dispatchUi({ type: 'setLoading', payload: true });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(addedUsers));
-  }, [addedUsers]);
-
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-
-  const visibleAssistants = useMemo(() => {
-    const filtered = assistants.filter((assistant) =>
-      assistant.name.toLowerCase().includes(normalizedSearch)
+    const timer = setTimeout(
+      () => {
+        if (!isMounted) {
+          return;
+        }
+        setAssistants(generateAssistants(numberOfCards, { seed }));
+        dispatchUi({ type: 'setLoading', payload: false });
+      },
+      numberOfCards >= 7 ? 180 : 0
     );
 
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [numberOfCards, seed]);
+
+  useEffect(() => {
+    if (!uiState.selectedTalentId) {
+      return;
+    }
+
+    const exists = assistants.some((assistant) => assistant.id === uiState.selectedTalentId);
+    if (!exists) {
+      dispatchUi({ type: 'closeDrawer' });
+    }
+  }, [assistants, uiState.selectedTalentId]);
+
+  const normalizedSearch = uiState.searchTerm.trim().toLowerCase();
+
+  const visibleAssistants = useMemo(() => {
+    const filtered = assistants.filter((assistant) => {
+      const keyword = `${assistant.name} ${assistant.role} ${assistant.skills.join(' ')}`.toLowerCase();
+      const roleMatch = uiState.selectedRole === 'all' || assistant.role === uiState.selectedRole;
+      const availabilityMatch =
+        uiState.selectedAvailability === 'all' || assistant.availability === uiState.selectedAvailability;
+      const rateMatch = isRateMatch(assistant.hourlyRateUsd, uiState.selectedRate);
+
+      return keyword.includes(normalizedSearch) && roleMatch && availabilityMatch && rateMatch;
+    });
+
     return filtered.sort((a, b) => {
-      if (sortOrder === 'highToLow') {
+      if (uiState.sortOrder === SORT_OPTIONS.HIGH_TO_LOW) {
         return b.likes - a.likes;
       }
       return a.likes - b.likes;
     });
-  }, [assistants, normalizedSearch, sortOrder]);
+  }, [
+    assistants,
+    normalizedSearch,
+    uiState.selectedRole,
+    uiState.selectedAvailability,
+    uiState.selectedRate,
+    uiState.sortOrder,
+  ]);
+
+  const selectedTalent = useMemo(
+    () => assistants.find((assistant) => assistant.id === uiState.selectedTalentId) || null,
+    [assistants, uiState.selectedTalentId]
+  );
 
   const handleInputChange = (event) => {
     const next = Math.min(Math.max(Number(event.target.value) || 0, 0), MAX_CARDS);
@@ -82,12 +155,8 @@ function App() {
     );
   };
 
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-  };
-
   const handleAddUser = (assistant) => {
-    setAddedUsers((previous) => {
+    setShortlistedTalent((previous) => {
       if (previous.some((stored) => stored.id === assistant.id)) {
         return previous;
       }
@@ -97,29 +166,110 @@ function App() {
         {
           id: assistant.id,
           name: assistant.name,
+          role: assistant.role,
           email: assistant.email,
           phone: assistant.phone,
           country: assistant.country,
+          hourlyRateUsd: assistant.hourlyRateUsd,
+          hireStatus: HIRE_STATUSES[0],
         },
       ];
     });
+  };
+
+  const handleAdvanceHireStatus = (id) => {
+    setShortlistedTalent((previous) =>
+      previous.map((talent) =>
+        talent.id === id ? { ...talent, hireStatus: getNextStatus(talent.hireStatus || HIRE_STATUSES[0]) } : talent
+      )
+    );
+  };
+
+  const getTalentHireStatus = (id) => {
+    const match = shortlistedTalent.find((talent) => talent.id === id);
+    return match?.hireStatus || HIRE_STATUSES[0];
   };
 
   const handleInquirySubmit = (inquiry) => {
     setSentInquiries((previous) => [...previous, inquiry]);
   };
 
+  const handleSeedChange = (event) => {
+    const nextSeed = Number(event.target.value);
+    if (Number.isFinite(nextSeed)) {
+      setSeed(nextSeed);
+    }
+  };
+
+  const handleExportJson = () => {
+    const payload = {
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      seed,
+      shortlist: shortlistedTalent,
+      inquiries: sentInquiries,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'assistanthub-demo-data.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setJsonStatus('Demo data exported.');
+  };
+
+  const handleImportJson = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await readJsonFile(file);
+      const parsed = JSON.parse(text);
+
+      if (Array.isArray(parsed.shortlist)) {
+        setShortlistedTalent(parsed.shortlist);
+      }
+      if (Array.isArray(parsed.inquiries)) {
+        setSentInquiries(parsed.inquiries);
+      }
+      if (Number.isFinite(Number(parsed.seed))) {
+        setSeed(Number(parsed.seed));
+      }
+      setJsonStatus('Demo data imported.');
+    } catch {
+      setJsonStatus('Import failed: invalid JSON format.');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const renderEmptyState = () => {
+    if (numberOfCards === 0) {
+      return <p className="empty-state">Talent list is empty. Increase card count to load candidates.</p>;
+    }
+    if (normalizedSearch || uiState.selectedRole !== 'all' || uiState.selectedAvailability !== 'all' || uiState.selectedRate !== RATE_FILTERS.ALL) {
+      return <p className="empty-state">No matching talent found. Try another skill, role, or rate filter.</p>;
+    }
+    return <p className="empty-state">No profile cards to display.</p>;
+  };
+
   return (
     <div className="app-shell">
       <header className="hero-shell">
-        <p className="hero-title">AssistantHub</p>
-        <p className="hero-subtitle">Your thoughtful assistant directory.</p>
+        <p className="hero-title">AssistantHub Talent Pool</p>
+        <p className="hero-subtitle">
+          Discover, shortlist, and contact assistant talent in minutes. Built for quick hiring demos.
+        </p>
       </header>
 
       <main className="content-shell">
-        <section className="controls-panel" aria-label="Assistant controls">
+        <section className="controls-panel" aria-label="Talent pool controls">
           <label htmlFor="numCards" className="panel-label">
-            Find Incredible Assistants
+            Talent Pool Size ({numberOfCards} generated)
           </label>
           <div className="controls-grid">
             <input
@@ -141,79 +291,217 @@ function App() {
               </button>
             </div>
 
-            <SearchBar value={searchTerm} onChange={handleSearchChange} />
+            <SearchBar
+              value={uiState.searchTerm}
+              onChange={(event) => dispatchUi({ type: 'setSearch', payload: event.target.value })}
+            />
 
             <select
               className="select-control"
-              value={sortOrder}
-              onChange={(event) => setSortOrder(event.target.value)}
+              value={uiState.sortOrder}
+              onChange={(event) => dispatchUi({ type: 'setSort', payload: event.target.value })}
               aria-label="Sort by likes"
             >
-              <option value="highToLow">Likes: High to Low</option>
-              <option value="lowToHigh">Likes: Low to High</option>
+              <option value={SORT_OPTIONS.HIGH_TO_LOW}>Likes: High to Low</option>
+              <option value={SORT_OPTIONS.LOW_TO_HIGH}>Likes: Low to High</option>
             </select>
 
-            <button className="ui-button dark" onClick={() => setIsInquiryModalOpen(true)}>
-              View Inquiry Sent
+            <div className="seed-control">
+              <label htmlFor="seedInput" className="panel-label">
+                Seed
+              </label>
+              <input
+                id="seedInput"
+                type="number"
+                className="input-control"
+                value={seed}
+                onChange={handleSeedChange}
+                aria-label="Deterministic seed"
+              />
+            </div>
+
+            <button className="ui-button dark" onClick={() => dispatchUi({ type: 'toggleInquiryModal' })}>
+              View Hiring Inquiries
             </button>
-            <button className="ui-button dark" onClick={() => setIsAddedModalOpen(true)}>
-              View Added Info
+            <button className="ui-button dark" onClick={() => dispatchUi({ type: 'toggleAddedModal' })}>
+              View Shortlist
             </button>
 
-            <CSVLink data={addedUsers} filename="added_users.csv" className="ui-button terracotta csv-link">
-              Export Added Info
+            <CSVLink
+              data={shortlistedTalent}
+              filename="shortlisted_talent.csv"
+              className="ui-button terracotta csv-link"
+            >
+              Export Shortlist CSV
             </CSVLink>
+            <button className="ui-button terracotta" onClick={handleExportJson}>
+              Export JSON
+            </button>
+            <button className="ui-button secondary" onClick={() => importInputRef.current?.click()}>
+              Import JSON
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              onChange={handleImportJson}
+              hidden
+              aria-label="Import JSON"
+            />
           </div>
+
+          <div className="chip-section">
+            <p className="chip-label">Role</p>
+            <div className="chip-group">
+              <button
+                className={`chip ${uiState.selectedRole === 'all' ? 'active' : ''}`}
+                onClick={() => dispatchUi({ type: 'setRoleFilter', payload: 'all' })}
+              >
+                All roles
+              </button>
+              {TALENT_ROLES.map((role) => (
+                <button
+                  key={role}
+                  className={`chip ${uiState.selectedRole === role ? 'active' : ''}`}
+                  onClick={() => dispatchUi({ type: 'setRoleFilter', payload: role })}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+
+            <p className="chip-label">Availability</p>
+            <div className="chip-group">
+              <button
+                className={`chip ${uiState.selectedAvailability === 'all' ? 'active' : ''}`}
+                onClick={() => dispatchUi({ type: 'setAvailabilityFilter', payload: 'all' })}
+              >
+                All availability
+              </button>
+              {AVAILABILITY_OPTIONS.map((availability) => (
+                <button
+                  key={availability}
+                  className={`chip ${uiState.selectedAvailability === availability ? 'active' : ''}`}
+                  onClick={() => dispatchUi({ type: 'setAvailabilityFilter', payload: availability })}
+                >
+                  {availability}
+                </button>
+              ))}
+            </div>
+
+            <p className="chip-label">Rate range</p>
+            <div className="chip-group">
+              {RATE_CHIPS.map((rateChip) => (
+                <button
+                  key={rateChip.value}
+                  className={`chip ${uiState.selectedRate === rateChip.value ? 'active' : ''}`}
+                  onClick={() => dispatchUi({ type: 'setRateFilter', payload: rateChip.value })}
+                >
+                  {rateChip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {jsonStatus && <p className="json-status">{jsonStatus}</p>}
         </section>
 
-        <section className="cards-section" aria-label="Assistant profiles">
-          {visibleAssistants.length > 0 ? (
+        <section className="cards-section" aria-label="Talent profiles">
+          {uiState.isLoading ? (
+            <p className="loading-state">Refreshing talent pool...</p>
+          ) : visibleAssistants.length > 0 ? (
             <div className="cards-grid">
-              {visibleAssistants.map((assistant) => (
+              {visibleAssistants.map((assistant, index) => (
                 <ProfileCards
                   key={assistant.id}
                   assistant={assistant}
                   onLikeClick={() => handleLikeClick(assistant.id)}
                   onAddClick={() => handleAddUser(assistant)}
-                  isAdded={addedUsers.some((user) => user.id === assistant.id)}
+                  onViewDetails={() => dispatchUi({ type: 'openDrawer', payload: assistant.id })}
+                  isAdded={shortlistedTalent.some((user) => user.id === assistant.id)}
+                  hireStatus={getTalentHireStatus(assistant.id)}
                   onInquirySubmit={handleInquirySubmit}
+                  animationDelay={index * 40}
                 />
               ))}
             </div>
           ) : (
-            <p className="empty-state">No profile cards to display.</p>
+            renderEmptyState()
           )}
         </section>
       </main>
 
-      {isAddedModalOpen && (
-        <div className="modal is-active" role="dialog" aria-modal="true" aria-label="Added assistants">
-          <div className="modal-background" onClick={() => setIsAddedModalOpen(false)}></div>
+      {uiState.isDrawerOpen && selectedTalent && (
+        <>
+          <div className="drawer-backdrop" onClick={() => dispatchUi({ type: 'closeDrawer' })}></div>
+          <aside className="detail-drawer" role="dialog" aria-label="Talent detail drawer">
+            <h2>{selectedTalent.name}</h2>
+            <p>
+              <strong>Role:</strong> {selectedTalent.role}
+            </p>
+            <p>
+              <strong>Availability:</strong> {selectedTalent.availability}
+            </p>
+            <p>
+              <strong>Rate:</strong> ${selectedTalent.hourlyRateUsd}/hr
+            </p>
+            <p>
+              <strong>Skills:</strong> {selectedTalent.skills.join(', ')}
+            </p>
+            <p>
+              <strong>Hire Status:</strong> {getTalentHireStatus(selectedTalent.id)}
+            </p>
+            <div className="drawer-actions">
+              <button className="ui-button terracotta" onClick={() => handleAddUser(selectedTalent)}>
+                {shortlistedTalent.some((talent) => talent.id === selectedTalent.id) ? 'Already Shortlisted' : 'Shortlist'}
+              </button>
+              <button
+                className="ui-button dark"
+                onClick={() => handleAdvanceHireStatus(selectedTalent.id)}
+                disabled={!shortlistedTalent.some((talent) => talent.id === selectedTalent.id)}
+              >
+                Advance Hire Status
+              </button>
+              <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'closeDrawer' })}>
+                Close
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
+
+      {uiState.isAddedModalOpen && (
+        <div className="modal is-active" role="dialog" aria-modal="true" aria-label="Shortlisted talent">
+          <div className="modal-background" onClick={() => dispatchUi({ type: 'toggleAddedModal' })}></div>
           <div className="modal-content modal-box">
-            <h2>Added Assistants</h2>
+            <h2>Shortlisted Talent</h2>
             <div className="modal-scroll">
-              {addedUsers.length > 0 ? (
-                addedUsers.map((user) => (
-                  <p key={user.id}>
-                    {user.name}, {user.email}, {user.phone}, {user.country}
-                  </p>
+              {shortlistedTalent.length > 0 ? (
+                shortlistedTalent.map((user) => (
+                  <div className="shortlist-row" key={user.id}>
+                    <p>
+                      {user.name} ({user.role}) - {user.email}, {user.phone}, {user.country}, ${user.hourlyRateUsd}/hr
+                    </p>
+                    <button className="ui-button secondary small" onClick={() => handleAdvanceHireStatus(user.id)}>
+                      Status: {user.hireStatus || HIRE_STATUSES[0]}
+                    </button>
+                  </div>
                 ))
               ) : (
-                <p>No assistant added.</p>
+                <p>No talent shortlisted yet.</p>
               )}
             </div>
-            <button className="ui-button secondary" onClick={() => setIsAddedModalOpen(false)}>
+            <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'toggleAddedModal' })}>
               Close
             </button>
           </div>
         </div>
       )}
 
-      {isInquiryModalOpen && (
-        <div className="modal is-active" role="dialog" aria-modal="true" aria-label="Sent inquiries">
-          <div className="modal-background" onClick={() => setIsInquiryModalOpen(false)}></div>
+      {uiState.isInquiryModalOpen && (
+        <div className="modal is-active" role="dialog" aria-modal="true" aria-label="Hiring inquiries">
+          <div className="modal-background" onClick={() => dispatchUi({ type: 'toggleInquiryModal' })}></div>
           <div className="modal-content modal-box">
-            <h2>Sent Inquiries</h2>
+            <h2>Hiring Inquiries</h2>
             <div className="modal-scroll">
               {sentInquiries.length > 0 ? (
                 sentInquiries.map((inquiry, index) => (
@@ -226,22 +514,22 @@ function App() {
                 <p>No inquiries sent.</p>
               )}
             </div>
-            <button className="ui-button secondary" onClick={() => setIsInquiryModalOpen(false)}>
+            <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'toggleInquiryModal' })}>
               Close
             </button>
           </div>
         </div>
       )}
 
-      <div className={`chatbot-panel ${isChatbotVisible ? 'active' : ''}`}>
-        {isChatbotVisible && (
+      <div className={`chatbot-panel ${uiState.isChatbotVisible ? 'active' : ''}`}>
+        {uiState.isChatbotVisible && (
           <Chatbot config={config} messageParser={MessageParser} actionProvider={ActionProvider} />
         )}
       </div>
 
       <button
         className="chatbot-icon"
-        onClick={() => setIsChatbotVisible((previous) => !previous)}
+        onClick={() => dispatchUi({ type: 'toggleChatbot' })}
         aria-label="Toggle chatbot"
       >
         <i className="fas fa-comment-dots" aria-hidden="true"></i>

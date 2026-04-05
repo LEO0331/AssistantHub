@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+﻿/* eslint-disable no-undef */
 import { generateAssistants } from './assistantFactory';
 
 describe('assistantFactory', () => {
@@ -15,10 +15,14 @@ describe('assistantFactory', () => {
     expect(assistant).toMatchObject({
       id: expect.any(String),
       name: expect.any(String),
+      role: expect.any(String),
+      skills: expect.any(Array),
       email: expect.any(String),
       phone: expect.any(String),
       avatarUrl: expect.any(String),
       country: expect.any(String),
+      hourlyRateUsd: expect.any(Number),
+      availability: expect.any(String),
       coordinates: {
         lat: expect.any(Number),
         lng: expect.any(Number),
@@ -26,10 +30,20 @@ describe('assistantFactory', () => {
       likes: expect.any(Number),
       order: expect.any(Number),
     });
+    expect(assistant.skills.length).toBeGreaterThanOrEqual(2);
   });
 
   test('clamps to 10 assistants', () => {
     const assistants = generateAssistants(99);
     expect(assistants).toHaveLength(10);
+  });
+
+  test('supports deterministic custom seed', () => {
+    const first = generateAssistants(2, { seed: 9001 });
+    const second = generateAssistants(2, { seed: 9001 });
+    const third = generateAssistants(2, { seed: 9002 });
+
+    expect(first).toEqual(second);
+    expect(first[0].name).not.toBe(third[0].name);
   });
 });

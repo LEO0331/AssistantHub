@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types */
+﻿/* eslint-disable react/prop-types */
 import React, { useState } from 'react';
 import ContactModal from './ContactModal';
 import QRCode from 'react-qr-code';
@@ -14,7 +14,16 @@ const markerIcon = new Icon({
   iconAnchor: [12, 41],
 });
 
-function ProfileCards({ assistant, onLikeClick, onAddClick, isAdded, onInquirySubmit }) {
+function ProfileCards({
+  assistant,
+  onLikeClick,
+  onAddClick,
+  isAdded,
+  onInquirySubmit,
+  onViewDetails,
+  hireStatus,
+  animationDelay = 0,
+}) {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState({ email: false, phone: false });
@@ -37,7 +46,7 @@ function ProfileCards({ assistant, onLikeClick, onAddClick, isAdded, onInquirySu
   };
 
   return (
-    <article className="profile-card">
+    <article className="profile-card" style={{ animationDelay: `${animationDelay}ms` }}>
       <div className="card-head">
         <img alt={`${assistant.name} avatar`} src={assistant.avatarUrl} className="avatar" />
         <div>
@@ -49,11 +58,18 @@ function ProfileCards({ assistant, onLikeClick, onAddClick, isAdded, onInquirySu
           >
             {assistant.name}
           </button>
+          <p className="talent-role">{assistant.role}</p>
+          <p className="talent-meta">
+            {assistant.availability} · ${assistant.hourlyRateUsd}/hr
+          </p>
+          <p className="status-chip">Hire Status: {hireStatus}</p>
           <div className="qr-row">
             <QRCode value={assistant.phone} size={34} />
           </div>
         </div>
       </div>
+
+      <p className="talent-skills">Skills: {assistant.skills.join(', ')}</p>
 
       <div className="stat-row">
         <button
@@ -84,7 +100,7 @@ function ProfileCards({ assistant, onLikeClick, onAddClick, isAdded, onInquirySu
         <div className="copy-row">
           <strong>{assistant.email}</strong>
           <CopyToClipboard text={assistant.email} onCopy={() => handleCopy('email')}>
-            <button type="button" className="ui-button secondary small">
+            <button type="button" className="ui-button secondary small" aria-label="Copy email">
               {copyStatus.email ? 'Copied!' : 'Copy'}
             </button>
           </CopyToClipboard>
@@ -92,16 +108,21 @@ function ProfileCards({ assistant, onLikeClick, onAddClick, isAdded, onInquirySu
         <div className="copy-row">
           <strong>{assistant.phone}</strong>
           <CopyToClipboard text={assistant.phone} onCopy={() => handleCopy('phone')}>
-            <button type="button" className="ui-button secondary small">
+            <button type="button" className="ui-button secondary small" aria-label="Copy phone">
               {copyStatus.phone ? 'Copied!' : 'Copy'}
             </button>
           </CopyToClipboard>
         </div>
       </div>
 
-      <button type="button" className="ui-button terracotta add-button" onClick={onAddClick} disabled={isAdded}>
-        {isAdded ? 'Added' : 'Add'}
-      </button>
+      <div className="card-action-row">
+        <button type="button" className="ui-button terracotta add-button" onClick={onAddClick} disabled={isAdded}>
+          {isAdded ? 'Shortlisted' : 'Shortlist'}
+        </button>
+        <button type="button" className="ui-button dark" onClick={onViewDetails}>
+          View Details
+        </button>
+      </div>
 
       <ContactModal
         isActive={isContactModalOpen}

@@ -4,8 +4,8 @@
     "homepage":  "https://leo0331.github.io/AssistantHub/",
     "private":  true,
     "dependencies":  {
+                         "@faker-js/faker":  "^9.6.0",
                          "@fortawesome/fontawesome-free":  "^6.6.0",
-                         "bulma":  "^1.0.2",
                          "leaflet":  "^1.9.4",
                          "react":  "^18.3.1",
                          "react-chatbot-kit":  "^2.2.2",
@@ -15,17 +15,13 @@
                          "react-leaflet":  "^4.2.1",
                          "react-qr-code":  "^2.0.15",
                          "react-scripts":  "5.0.1",
-                         "styled-components":  "^6.1.12",
-                         "web-vitals":  "^2.1.4",
-                         "@faker-js/faker":  "^9.6.0"
+                         "web-vitals":  "^2.1.4"
                      },
     "scripts":  {
                     "start":  "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
                     "build":  "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
                     "test":  "jest --runInBand",
                     "lint":  "eslint src/**/*.js",
-                    "predeploy":  "npm run build",
-                    "deploy":  "gh-pages -d build",
                     "test:coverage":  "jest --runInBand --coverage",
                     "test:ci":  "jest --runInBand --coverage --watchAll=false"
                 },
@@ -58,12 +54,11 @@
                             "@testing-library/react":  "^16.0.0",
                             "@testing-library/user-event":  "^14.5.2",
                             "babel-jest":  "^29.7.0",
+                            "cross-env":  "^7.0.3",
                             "eslint":  "^8.57.0",
                             "eslint-plugin-react":  "^7.35.0",
-                            "gh-pages":  "^6.1.1",
                             "globals":  "^15.9.0",
                             "identity-obj-proxy":  "^3.0.0",
-                            "jest":  "^27.5.1",
-                            "cross-env":  "^7.0.3"
+                            "jest":  "^27.5.1"
                         }
 }
