@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { CSVLink } from 'react-csv';
 import Chatbot from 'react-chatbot-kit';
 import 'react-chatbot-kit/build/main.css';
@@ -442,7 +442,7 @@ function App() {
     dispatchUi({ type: 'resetFilters' });
   };
 
-  const runDemoScenario = (fromUrl = false) => {
+  const runDemoScenario = useCallback((fromUrl = false) => {
     setShortlistedTalent([]);
     setSentInquiries([]);
     setSeed(DEMO_SCENARIO_SEED);
@@ -459,7 +459,7 @@ function App() {
         ? 'Demo scenario loaded from URL preset.'
         : 'Demo scenario loaded. Try: filter -> shortlist -> advance status -> export.'
     );
-  };
+  }, [setSeed, setShortlistedTalent, setTalentSource]);
 
   useEffect(() => {
     if (didApplyUrlDemoRef.current) {
@@ -470,7 +470,7 @@ function App() {
       didApplyUrlDemoRef.current = true;
       runDemoScenario(true);
     }
-  }, []);
+  }, [runDemoScenario]);
 
   const tableVirtualRows = useMemo(() => {
     const source = visibleAssistants;
