@@ -1,7 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { CSVLink } from 'react-csv';
-import Chatbot from 'react-chatbot-kit';
-import 'react-chatbot-kit/build/main.css';
 import ProfileCards from './ProfileCards';
 import SearchBar from './SearchBar';
 import config from './ChatbotConfig';
@@ -13,6 +11,8 @@ import { usePersistentState } from './hooks/usePersistentState';
 import { initialUiState, RATE_FILTERS, SORT_OPTIONS, uiReducer } from './state/uiReducer';
 import { loadTalentPool, TALENT_SOURCES } from './services/talentAdapter';
 import './App.css';
+
+const Chatbot = lazy(() => import('./LazyChatbot'));
 
 const MAX_CARDS = 5000;
 const DEFAULT_CARDS = 6;
@@ -1055,7 +1055,9 @@ function App() {
 
       <div className={`chatbot-panel ${uiState.isChatbotVisible ? 'active' : ''}`}>
         {uiState.isChatbotVisible && (
-          <Chatbot config={config} messageParser={MessageParser} actionProvider={ActionProvider} />
+          <Suspense fallback={<p className="chatbot-loading">Loading assistant...</p>}>
+            <Chatbot config={config} messageParser={MessageParser} actionProvider={ActionProvider} />
+          </Suspense>
         )}
       </div>
 

@@ -48,7 +48,15 @@ function ProfileCards({
   return (
     <article className="profile-card" style={{ animationDelay: `${animationDelay}ms` }}>
       <div className="card-head">
-        <img alt={`${assistant.name} avatar`} src={assistant.avatarUrl} className="avatar" />
+        <img
+          alt={`${assistant.name} avatar`}
+          src={assistant.avatarUrl}
+          className="avatar"
+          width="72"
+          height="72"
+          loading="lazy"
+          decoding="async"
+        />
         <div>
           <button
             type="button"
