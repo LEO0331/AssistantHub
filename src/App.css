@@ -206,7 +206,7 @@
 }
 
 .ui-button.terracotta {
-  background: var(--brand-terracotta);
+  background: var(--brand-terracotta-strong);
   color: var(--bg-ivory);
   padding: 0 12px 0 8px;
   min-height: 40px;
