@@ -1,6 +1,6 @@
 {
   "files": {
-    "main.css": "/AssistantHub/static/css/main.8a6b35f7.css",
+    "main.css": "/AssistantHub/static/css/main.1e272fa6.css",
     "main.js": "/AssistantHub/static/js/main.c3e42f2c.js",
     "static/css/552.e4bfa12d.chunk.css": "/AssistantHub/static/css/552.e4bfa12d.chunk.css",
     "static/js/552.77366e97.chunk.js": "/AssistantHub/static/js/552.77366e97.chunk.js",
@@ -13,13 +13,13 @@
     "static/media/fa-v4compatibility.ttf": "/AssistantHub/static/media/fa-v4compatibility.0f6cb412603527bda691.ttf",
     "static/media/fa-v4compatibility.woff2": "/AssistantHub/static/media/fa-v4compatibility.6cfec8414be20e2c3426.woff2",
     "index.html": "/AssistantHub/index.html",
-    "main.8a6b35f7.css.map": "/AssistantHub/static/css/main.8a6b35f7.css.map",
+    "main.1e272fa6.css.map": "/AssistantHub/static/css/main.1e272fa6.css.map",
     "main.c3e42f2c.js.map": "/AssistantHub/static/js/main.c3e42f2c.js.map",
     "552.e4bfa12d.chunk.css.map": "/AssistantHub/static/css/552.e4bfa12d.chunk.css.map",
     "552.77366e97.chunk.js.map": "/AssistantHub/static/js/552.77366e97.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.8a6b35f7.css",
+    "static/css/main.1e272fa6.css",
     "static/js/main.c3e42f2c.js"
   ]
 }
