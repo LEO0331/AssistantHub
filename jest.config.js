@@ -1,7 +1,8 @@
 /* eslint-disable no-undef */
 module.exports = {
   transform: {
-    '^.+\\.jsx?$': 'babel-jest',
+    // Dependencies do not inherit .babelrc; explicitly convert their ESM to CommonJS.
+    '^.+\\.jsx?$': ['babel-jest', { presets: ['@babel/preset-env'] }],
   },
   testEnvironment: 'jsdom',
   collectCoverageFrom: [
@@ -22,5 +23,6 @@ module.exports = {
     '\\.(css|less)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2)$': '<rootDir>/__mocks__/fileMock.js',
   },
-  transformIgnorePatterns: ['/node_modules/(?!react-leaflet|@react-leaflet|leaflet)'],
+  // Faker v10 ships ESM, so Babel must transform it for Jest's CommonJS runtime.
+  transformIgnorePatterns: ['/node_modules/(?!react-leaflet|@react-leaflet|leaflet|@faker-js/faker)'],
 };
