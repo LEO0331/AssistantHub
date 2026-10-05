@@ -6,9 +6,9 @@ module.exports = {
   },
   testEnvironment: 'jsdom',
   collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js',
-    '!src/index.js',
+    'src/**/*.{js,jsx}',
+    '!src/**/*.test.{js,jsx}',
+    '!src/index.jsx',
   ],
   coverageReporters: ['text', 'lcov', 'json-summary'],
   coverageThreshold: {

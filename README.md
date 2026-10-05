@@ -18,6 +18,7 @@ AssistantHub is a lightweight React talent-pool demo portal for discovering assi
 
 ## Tech Stack
 - React 18
+- Vite 8 for development and production builds
 - Jest + React Testing Library
 - Leaflet / React Leaflet
 - Font Awesome
@@ -38,15 +39,25 @@ There is currently no backend. State is client-side only:
 ## Scripts
 - `npm start`: run dev server
 - `npm run build`: production build
+- `npm run preview`: preview the production build locally
 - `npm test`: run tests
 - `npm run test:coverage`: run tests with coverage
 - `npm run test:ci`: CI test mode (`coverage + no watch`)
+- `npm run test:tooling`: integration checks for dev-server protections and built asset paths (run after build)
 - `npm run lint`: lint source files
 
 ## Run Locally
-1. `npm install`
+Requires Node.js 20.19+ or 22.12+ (including newer supported Node releases).
+
+1. `npm ci`
 2. `npm start`
-3. Open `http://localhost:3000`
+3. Open `http://127.0.0.1:3000/AssistantHub/`
+
+The development server binds to loopback. Vite uses `/AssistantHub/` as the base
+path and writes production output to `build/` for GitHub Pages. Use
+`npm run preview` to check that output at `http://127.0.0.1:4173/AssistantHub/`.
+The browser target is Vite's modern-browser baseline; CRA's Browserslist settings
+and OpenSSL legacy-provider workaround are no longer used.
 
 ## CI/CD
 - Pull Requests run [CI workflow](https://github.com/leo0331/AssistantHub/actions/workflows/ci.yml) for lint + coverage tests.

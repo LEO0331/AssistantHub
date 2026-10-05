@@ -24,7 +24,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: PUBLIC_URL=. npm run build
+        run: npm run build
 
       - name: Run Lighthouse CI (temporary public dashboard)
         uses: treosh/lighthouse-ci-action@v12

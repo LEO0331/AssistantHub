@@ -28,3 +28,9 @@ jobs:
 
       - name: Test with coverage
         run: npm run test:ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify development security and production paths
+        run: npm run test:tooling
