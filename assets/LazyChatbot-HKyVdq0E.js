@@ -1,0 +1,1 @@
+import{i as e,n as t,r as n,t as r}from"./index-D4aMxdyG.js";n();var i=e(r()),a=t();function o(e){return(0,a.jsx)(i.default,{...e})}export{o as default};
