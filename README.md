@@ -60,8 +60,29 @@ The browser target is Vite's modern-browser baseline; CRA's Browserslist setting
 and OpenSSL legacy-provider workaround are no longer used.
 
 ## CI/CD
-- Pull Requests run [CI workflow](https://github.com/leo0331/AssistantHub/actions/workflows/ci.yml) for lint + coverage tests.
-- `main` branch deploys through [Deploy workflow](https://github.com/leo0331/AssistantHub/actions/workflows/deploy.yml).
+- Pull requests run [CI](https://github.com/LEO0331/AssistantHub/actions/workflows/ci.yml) for lint, coverage tests, build, and tooling checks.
+- Pushes to `main` run [Deploy AssistantHub](https://github.com/LEO0331/AssistantHub/actions/workflows/deploy.yml): lint, tests, Vite build, and tooling checks precede uploading `build/` as an official GitHub Pages artifact.
+- A separate deployment job uses `actions/deploy-pages` to publish the artifact to the `github-pages` environment. It requires `pages: write` and `id-token: write`; the build job only needs read access. No generated-site commits or `gh-pages` branch are needed after the Pages source is migrated.
+- The Vite base path remains `/AssistantHub/`, with the public URL at https://leo0331.github.io/AssistantHub/.
+
+### Migrate the Pages source and retire `gh-pages`
+
+The workflow change does **not** modify GitHub Pages repository settings. For a safe one-time transition:
+
+1. **Merge the workflow migration PR only after review.** Keep `gh-pages` intact until the new deployment is verified.
+2. In [Settings → Pages](https://github.com/LEO0331/AssistantHub/settings/pages), change **Build and deployment → Source** from **Deploy from a branch** (`gh-pages` / root) to **GitHub Actions**. This requires repository administrative access.
+3. Manually run [Deploy AssistantHub](https://github.com/LEO0331/AssistantHub/actions/workflows/deploy.yml) from `main` (or use `gh workflow run deploy.yml --repo LEO0331/AssistantHub --ref main`). If the merge-triggered run began before the Pages setting changed, rerun it after switching the source.
+4. Confirm **build** and **deploy** both pass, then smoke-test https://leo0331.github.io/AssistantHub/ including CSS/JS assets, images, chatbot, search/filters, and mobile navigation. Check the deployment's environment URL and Pages settings before deleting the old branch.
+5. Optionally preserve the historical published artifact as a Git tag, then delete the branch **in a separate manual operation**:
+
+   ```bash
+   git fetch origin
+   git tag backup/assistanthub-gh-pages origin/gh-pages
+   git push origin backup/assistanthub-gh-pages
+   git push origin --delete gh-pages
+   ```
+
+Do **not** delete `gh-pages` merely because the PR was merged or a build passed. The successful native Pages **deployment and live-site smoke test** are the release criteria. If native deployment fails before branch deletion, keep the old branch and restore **Deploy from a branch → gh-pages / root** in Pages settings while troubleshooting. If a rollback is necessary after deleting the branch, restore it from the backup tag before switching the Pages source back. The migration PR intentionally does not alter Pages settings or delete branches.
 
 ## Testing Notes
 Coverage thresholds are enforced in `jest.config.js`:
