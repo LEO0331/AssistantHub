@@ -87,6 +87,7 @@ Security assessments are date-specific: a passing production audit gate is **not
 - [Implemented local API contract](docs/api-contract.md)
 - [Local deployment and security decision](docs/release-readiness-pr8.md)
 - [React major-version upgrade policy](docs/react-dependency-policy.md)
+- [Security review and prioritized risks (November 18, 2026)](docs/security-review-2026-11-18.md)
 - [Design review in English](docs/system-design-review.en.md) / [繁體中文](docs/system-design-review.zh-TW.md)
 
 For implementation history, use [GitHub pull requests](https://github.com/LEO0331/AssistantHub/pulls?q=is%3Apr+is%3Amerged) rather than treating individual PR numbers as product features. Historical security assessment details and original Pages migration notes remain in the `docs/` folder.
