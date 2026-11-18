@@ -213,7 +213,9 @@ test('structured HTTP logs expose only allowlisted metadata and a server-owned r
     'Authorization', 'password_hash', 'cookie', 'SQL']) {
     assert.equal(rendered.includes(forbidden), false, 'Leaked sensitive input to log');
   }
-  await ctx.transition(id, actor.token, { key });
+  const replay = await ctx.transition(id, actor.token, { key, reason: secretReason });
+  assert.equal(replay.status, 200);
+  assert.equal(replay.headers.get('idempotency-replayed'), 'true');
   await new Promise(resolve => setImmediate(resolve));
   assert.ok(ctx.logs.some(row => row.outcome === 'replay' && row.status === 200));
 });
