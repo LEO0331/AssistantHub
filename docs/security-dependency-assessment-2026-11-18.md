@@ -51,7 +51,7 @@ Check [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) (
 
 A separate GitHub Actions `Dependency security assessment (report only)` workflow runs:
 1. `npm ci --ignore-scripts` from the existing, unchanged lockfile.
-2. `node --test scripts/dependency-security-assessment.test.mjs` to exercise failure handling and classification.
+2. `node --test scripts/dependency-security-assessment.check.mjs` to exercise failure handling and classification.
 3. `node scripts/dependency-security-assessment.mjs`, which runs `npm audit --json --audit-level=low` for all dependencies and `npm audit --json --audit-level=low --omit=dev` for production scope.
 
 The script classifies named packages, installed versions and occurrence counts, direct vs transitive dependencies, whether a package appears in the production-only audit, available advisory links, and npm-suggested fixes. It fails on audit retrieval/parsing errors instead of presenting unknown findings as zero. It writes JSON/Markdown into an ignored local `.security-reports/` folder and prints the Markdown to Actions logs and job summary.
