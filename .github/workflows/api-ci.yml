@@ -25,6 +25,7 @@ jobs:
       DB_USER: assistanthub_test
       DB_PASSWORD: ci_local_only_password
       NODE_ENV: test
+      AUTH_JWT_SECRET: ci_only_jwt_signing_secret_do_not_use_outside_tests_12345
     services:
       mysql:
         image: mysql:8.4
@@ -45,6 +46,15 @@ jobs:
           cache: npm
           cache-dependency-path: api/package-lock.json
 
+      # TEMPORARY: generate the immutable lock from api/package.json for this PR,
+      # then commit the npm-generated lockfile and REMOVE this step before review.
+      - name: Bootstrap JWT dependency lockfile (temporary)
+        shell: bash
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --prefix api
+          echo API_LOCK_BEGIN
+          base64 -w0 api/package-lock.json | fold -w1000 | sed 's/^/API_LOCK_CHUNK /'
+          echo API_LOCK_END
       - name: Install exact API lockfile
         run: npm ci --prefix api
       - name: Validate API JavaScript syntax
