@@ -4,14 +4,14 @@
 ![Deploy](https://github.com/leo0331/AssistantHub/actions/workflows/deploy.yml/badge.svg)
 ![Coverage Gate](https://img.shields.io/badge/coverage%20gate-70%2F70%2F60-brightgreen)
 
-AssistantHub is a lightweight React talent-pool demo portal for discovering assistants, shortlisting talent, and progressing hire requests through a local pipeline.
+AssistantHub is a React talent-pool portfolio demo with **two distinct data modes**: a public offline/browser simulation and an optional locally run, JWT-protected Express/MySQL hiring workflow. The public GitHub Pages site does not host a backend.
 
-## AssistantHub 2.0 roadmap (incremental upgrade)
+## AssistantHub 2.0 — completed milestones and current status
 
-An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The proposed system adds a separately hosted Express API, Sequelize/MySQL persistence, JWT authentication, server-side RBAC, version-based optimistic concurrency, and a transactional audit trail. **PRs #2–#7 deliver a locally runnable full-stack hiring workflow MVP with durable idempotency:** Express/MySQL persistence, JWT/RBAC, version-checked hiring transitions, a transactional audit history, and an authenticated React workflow panel. The backend remains **not publicly deployed**; default GitHub Pages/local/mock demo flows are unchanged unless an API origin is explicitly configured.
+**PRs #1–#8 are merged and the locally runnable full-stack MVP is implemented.** It includes Express/MySQL persistence, JWT authentication and server-side RBAC, optimistic version-based hiring transitions, atomic audit events, and durable actor-scoped idempotent replay. **Public GitHub Pages remains an offline-only frontend**; the API is loopback-only and is not approved for public hosting. See the [verified current-state summary (November 18, 2026)](docs/current-state.md).
 
 - [Architecture and phased rollout](docs/architecture-v2.md)
-- [Draft REST API contract and test scenarios](docs/api-contract.md)
+- [Implemented local REST API contract and test scenarios](docs/api-contract.md)
 - PR #1: documentation and nonfunctional configuration cleanup only.
 - PR #2: isolated Express/MySQL foundation (complete).
 - PR #3: read-only synthetic candidate API, server search/paging and optional frontend browser.
@@ -19,23 +19,25 @@ An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The p
 - PR #5: transactional hiring workflow and durable MySQL audit (API-only).
 - PR #6: connect authenticated hiring status controls and audit timeline to React (first local full-stack MVP).
 - PR #7: persistent actor-scoped idempotency, same-key safe replay, request IDs, structured logs and bounded retention (implemented).
-- PR #8: local API security headers and binding guard, pinned CI actions, offline Pages artifact gate, Dependabot and explicit release criteria (implemented in PR #30).
+- PR #8 (PR #30): local API security headers and loopback binding, pinned CI actions, offline Pages artifact guard, dependency monitoring and release criteria (merged).
+- PR #39: removed the internal Demo Checklist; the offline detail drawer now advances status even before shortlisting, and **Hired** remains final (merged).
+- PR #37: restored React/React DOM 18.3.1 compatibility and added a pre-install dependency guard after an unsafe React DOM 19-only upgrade failed (merged; React 19 remains deferred).
 
-Existing `local` and `mock-api` data sources remain browser simulations (the latter is a timer, **not** an HTTP API). The GitHub Pages base path `/AssistantHub/`, output directory `build/`, CI and deployment behavior are unchanged by PR #1. Do not use synthetic profile/contact data as real hiring information.
+Existing `local` and `mock-api` data sources remain browser simulations (the latter uses a timer, **not** an HTTP API). The GitHub Pages base path is `/AssistantHub/` and Vite output directory is `build/`. All data is synthetic; do not treat demo contact/profile information as real applicants.
 
 ## Highlights
 - Deterministic talent generation via `@faker-js/faker` (seed-controlled).
-- Data-source options (`local` / `mock-api` / optional read-only `api`) for backend migration readiness.
+- Data-source options (`local` / `mock-api` / optional **authenticated MySQL** `api`), with the public static build remaining offline-only.
 - Talent filters: role, availability, rate range, and text search.
-- One-page talent detail drawer (no routing, no backend).
-- Local hire status pipeline: `New -> Contacted -> Interview -> Hired`.
+- Offline talent detail drawer and separate authenticated API workflow panel when a private backend is configured.
+- Offline status pipeline: `New → Contacted → Interview → Hired` (**Hired** is final). In the detail drawer, the first advance also adds an unshortlisted candidate to the shortlist. The API has a distinct, server-enforced state machine including **Rejected**.
 - Local demo data portability with CSV and JSON export/import.
 - Large-volume demo support: `Load 500/2000/5000`, virtualized list mode, pagination.
 - Chatbot helper + map modal + contact inquiry flow.
 
 ## AssistantHub 2.0 backend foundation
 
-The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The optional authenticated API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication and role-protected candidate reads are included in PR #4. PR #5 adds transactional application transitions/audit; PR #6 connects authenticated hiring controls and audit history; PR #7 adds durable idempotency keys and an explicit same-key retry on uncertain HTTP outcomes. For transaction and failure-mode details see [PR #5 workflow review](docs/workflow-audit-pr5.md). See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
+The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The optional authenticated API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication and role-protected candidate reads are included in PR #4. PR #5 adds transactional application transitions/audit; PR #6 connects authenticated hiring controls and audit history; PR #7 adds durable idempotency keys and an explicit same-key retry on uncertain HTTP outcomes. For transaction and failure-mode details see [PR #5 workflow review](docs/workflow-audit-pr5.md). See [architecture](docs/architecture-v2.md), [current status](docs/current-state.md) and the [implemented local API contract](docs/api-contract.md).
 
 ## Tech Stack
 - React 18
@@ -60,7 +62,7 @@ The React 18 + React DOM 18 runtime is retained until its React Leaflet and clip
 
 ## Dependency security assessment
 
-The [November 18, 2026 dependency assessment](docs/security-dependency-assessment-2026-11-18.md) documents current audit findings and a separate report-only workflow. A successful diagnostic check does **not** certify a clean dependency tree; application CI/security gates are unchanged. The October 5 Dependabot review is historical.
+The [November 18, 2026 dependency assessment](docs/security-dependency-assessment-2026-11-18.md) captures a **dated audit snapshot**, not a continuously current vulnerability count; rerun the report-only dependency workflow for fresh evidence. A successful report job does **not** mean the dependency tree is clean. The October 5 Dependabot review is also historical. See [current-state summary](docs/current-state.md).
 
 ## Authenticated MySQL hiring workflow (PRs #3–#7)
 
@@ -75,7 +77,7 @@ In the Data source selector choose **Real MySQL API (authenticated workflow)**. 
 Workflow demo: sign in, select a candidate, choose **View hiring workflow**, inspect server status/version and paginated audit events. Recruiter/Admin may submit permitted transitions; Viewer may only read. On 409 the UI requires a server refresh; on uncertain network/5xx outcomes it holds the original UUID-v4 idempotency key and exact payload and offers an **explicit same-key safe retry**. It never automatically repeats a POST or creates a new key for an uncertain write. See [PR #7 replay/retention guide](docs/idempotency-pr7.md). See [PR #6 UI and recovery guide](docs/hiring-ui-pr6.md). The backend remains local-only; no real applicants or public writable accounts.
 
 ## Security & Demo Limitations
-- This is a client-only demo: all state can be modified in browser devtools and must not be treated as secure or authoritative.
+- The **public offline frontend** is a client-only demo: shortlist and status data are editable in browser devtools and must not be treated as secure or authoritative. The optional local API uses backend-verified JWT/RBAC and MySQL state.
 - Imported JSON is schema-validated and size-capped, but it is still untrusted demo input; do not use this flow for sensitive data.
 - The offline/local/mock demo still has no authorization (its browser state is editable). The separate API browser requires login and server-side RBAC from PR #4.
 - In offline local/mock modes there is no server audit; authenticated API mode persists MySQL transitions and audit events.
@@ -88,6 +90,7 @@ Workflow demo: sign in, select a candidate, choose **View hiring workflow**, ins
 - `npm test`: run tests
 - `npm run test:coverage`: run tests with coverage
 - `npm run test:ci`: CI test mode (`coverage + no watch`)
+- `npm run test:react-stack`: validate the React 18 / React DOM 18 locked dependency graph and integration peer compatibility; also runs before `npm ci` in CI, Lighthouse and Pages deployment
 - `npm run test:tooling`: integration checks for dev-server protections and built asset paths (run after build)
 - `npm run test:release`: checks workflow supply-chain pins/least privilege and rejects unsafe or API-enabled Pages artifacts (run after building offline)
 - `npm run lint`: lint source files
@@ -106,14 +109,14 @@ The browser target is Vite's modern-browser baseline; CRA's Browserslist setting
 and OpenSSL legacy-provider workaround are no longer used.
 
 ## CI/CD
-- Pull requests run [CI](https://github.com/LEO0331/AssistantHub/actions/workflows/ci.yml) for lint, coverage, build, tooling, **blocking production high/critical dependency audit** and offline artifact/supply-chain policy checks.
-- Pushes to `main` run [Deploy AssistantHub](https://github.com/LEO0331/AssistantHub/actions/workflows/deploy.yml): lint, tests, Vite build, tooling, audit and **offline release guard** precede uploading `build/` as an official GitHub Pages artifact. API URL is explicitly disabled in the public build.
+- Pull requests run [CI](https://github.com/LEO0331/AssistantHub/actions/workflows/ci.yml) for React dependency compatibility, strict `npm ci`, lint, coverage, build, tooling, **blocking production high/critical dependency audit** and offline artifact/supply-chain policy checks.
+- Pushes to `main` run [Deploy AssistantHub](https://github.com/LEO0331/AssistantHub/actions/workflows/deploy.yml): pre-install React compatibility, lint, tests, Vite build, tooling, audit and the **offline release guard** precede uploading `build/`. The backend URL is explicitly disabled in the public build. [The PR #37 merge deployment succeeded](https://github.com/LEO0331/AssistantHub/actions/runs/44249787263) on November 18, 2026.
 - A separate deployment job uses `actions/deploy-pages` to publish the artifact to the `github-pages` environment. It requires `pages: write` and `id-token: write`; the build job only needs read access. No generated-site commits or `gh-pages` branch are needed after the Pages source is migrated.
 - The Vite base path remains `/AssistantHub/`, with the public URL at https://leo0331.github.io/AssistantHub/.
 
-### Migrate the Pages source and retire `gh-pages`
+### Historical migration procedure: switch Pages from `gh-pages` to GitHub Actions
 
-The workflow change does **not** modify GitHub Pages repository settings. For a safe one-time transition:
+The GitHub Actions Pages deployment was already working as of the [verified November 18 deployment](https://github.com/LEO0331/AssistantHub/actions/runs/44249787263). The steps below are retained **for historical migration or disaster recovery**, not as an outstanding task. Current Pages settings must still be checked independently before any administrative change. The workflow does **not** modify Pages repository settings. Historical migration procedure:
 
 1. **Merge the workflow migration PR only after review.** Keep `gh-pages` intact until the new deployment is verified.
 2. In [Settings → Pages](https://github.com/LEO0331/AssistantHub/settings/pages), change **Build and deployment → Source** from **Deploy from a branch** (`gh-pages` / root) to **GitHub Actions**. This requires repository administrative access.
