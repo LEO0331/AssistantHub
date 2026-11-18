@@ -26,8 +26,9 @@ const TALENT_SOURCE_KEY = 'talentSource';
 export const HIRE_STATUSES = ['New', 'Contacted', 'Interview', 'Hired'];
 export const DEFAULT_IMPORT_MAX_BYTES = 1024 * 1024 * 2;
 const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
-const TABLE_ROW_HEIGHT = 54;
-const TABLE_VIEWPORT_HEIGHT = 432;
+// Virtual rows have a fixed height so scroll offsets match the rendered table.
+const TABLE_ROW_HEIGHT = 72;
+const TABLE_VIEWPORT_HEIGHT = 480;
 const DEMO_SCENARIO_SEED = 424242;
 const DEMO_SCENARIO_COUNT = 500;
 
@@ -179,7 +180,6 @@ function App() {
   const [viewMode, setViewMode] = useState('cards');
   const [tableScrollTop, setTableScrollTop] = useState(0);
   const importInputRef = useRef(null);
-  const tableViewportRef = useRef(null);
   const didApplyUrlDemoRef = useRef(false);
   const debouncedSearchTerm = useDebouncedValue(uiState.searchTerm.trim().toLowerCase(), 180);
 
@@ -487,18 +487,15 @@ function App() {
   }, [runDemoScenario]);
 
   const tableVirtualRows = useMemo(() => {
-    const source = visibleAssistants;
-    const totalHeight = source.length * TABLE_ROW_HEIGHT;
     const startIndex = Math.max(0, Math.floor(tableScrollTop / TABLE_ROW_HEIGHT) - 5);
     const endIndex = Math.min(
-      source.length,
+      visibleAssistants.length,
       Math.ceil((tableScrollTop + TABLE_VIEWPORT_HEIGHT) / TABLE_ROW_HEIGHT) + 5
     );
     return {
-      totalHeight,
       startIndex,
       endIndex,
-      items: source.slice(startIndex, endIndex),
+      items: visibleAssistants.slice(startIndex, endIndex),
     };
   }, [visibleAssistants, tableScrollTop]);
 
@@ -747,69 +744,73 @@ function App() {
               </div>
             ) : (
               <div className="table-shell">
-                <table className="talent-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Role</th>
-                      <th>Availability</th>
-                      <th>Rate</th>
-                      <th>Likes</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                </table>
                 <div
                   className="table-viewport"
-                  ref={tableViewportRef}
-                  style={{ maxHeight: `${TABLE_VIEWPORT_HEIGHT}px`, overflowY: 'auto' }}
+                  style={{ maxHeight: `${TABLE_VIEWPORT_HEIGHT}px` }}
                   onScroll={(event) => setTableScrollTop(event.currentTarget.scrollTop)}
                 >
-                  <div style={{ height: `${tableVirtualRows.totalHeight}px`, position: 'relative' }}>
-                    <table className="talent-table">
-                      <tbody>
-                        {tableVirtualRows.items.map((assistant, rowIndex) => (
-                          <tr
-                            key={assistant.id}
-                            style={{
-                              position: 'absolute',
-                              top: `${(tableVirtualRows.startIndex + rowIndex) * TABLE_ROW_HEIGHT}px`,
-                              left: 0,
-                              right: 0,
-                              width: '100%',
-                              display: 'table',
-                              tableLayout: 'fixed',
-                              height: `${TABLE_ROW_HEIGHT}px`,
-                            }}
-                          >
-                            <td>{assistant.name}</td>
-                            <td>{assistant.role}</td>
-                            <td>{assistant.availability}</td>
-                            <td>${assistant.hourlyRateUsd}/hr</td>
-                            <td>{assistant.likes}</td>
-                            <td>{getTalentHireStatus(assistant.id)}</td>
-                            <td className="table-actions">
-                              <button className="ui-button secondary small" onClick={() => handleLikeClick(assistant.id)}>
+                  <table className="talent-table">
+                    <colgroup>
+                      <col style={{ width: '15%' }} />
+                      <col style={{ width: '19%' }} />
+                      <col style={{ width: '18%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '8%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '20%' }} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Availability</th>
+                        <th scope="col">Rate</th>
+                        <th scope="col">Likes</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableVirtualRows.startIndex > 0 && (
+                        <tr className="virtual-spacer" aria-hidden="true">
+                          <td colSpan={7} style={{ height: `${tableVirtualRows.startIndex * TABLE_ROW_HEIGHT}px` }} />
+                        </tr>
+                      )}
+                      {tableVirtualRows.items.map((assistant) => (
+                        <tr key={assistant.id}>
+                          <td><span className="table-cell-text" title={assistant.name}>{assistant.name}</span></td>
+                          <td><span className="table-cell-text" title={assistant.role}>{assistant.role}</span></td>
+                          <td><span className="table-cell-text" title={assistant.availability}>{assistant.availability}</span></td>
+                          <td>${assistant.hourlyRateUsd}/hr</td>
+                          <td>{assistant.likes}</td>
+                          <td>{getTalentHireStatus(assistant.id)}</td>
+                          <td>
+                            <div className="table-actions" role="group" aria-label={`Actions for ${assistant.name}`}>
+                              <button type="button" className="ui-button secondary small"
+                                onClick={() => handleLikeClick(assistant.id)}>
                                 Like
                               </button>
-                              <button className="ui-button secondary small" onClick={() => handleAddUser(assistant)}>
+                              <button type="button" className="ui-button secondary small"
+                                onClick={() => handleAddUser(assistant)}>
                                 {shortlistedTalent.some((user) => user.id === assistant.id) ? 'Shortlisted' : 'Shortlist'}
                               </button>
-                              <button
-                                className="ui-button secondary small"
-                                onClick={() => {
-                                  dispatchUi({ type: 'openDrawer', payload: assistant.id });
-                                }}
-                              >
+                              <button type="button" className="ui-button secondary small"
+                                onClick={() => dispatchUi({ type: 'openDrawer', payload: assistant.id })}>
                                 Detail
                               </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {tableVirtualRows.endIndex < visibleAssistants.length && (
+                        <tr className="virtual-spacer" aria-hidden="true">
+                          <td colSpan={7} style={{
+                            height: `${(visibleAssistants.length - tableVirtualRows.endIndex) * TABLE_ROW_HEIGHT}px`,
+                          }} />
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )

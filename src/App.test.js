@@ -169,8 +169,46 @@ describe('App integration', () => {
 
     fireEvent.click(screen.getByText('List Mode'));
 
-    expect(screen.getAllByRole('table').length).toBeGreaterThan(1);
+    // One semantic table keeps the sticky headers and virtual rows aligned.
+    expect(screen.getAllByRole('table')).toHaveLength(1);
+    expect(screen.getAllByRole('columnheader')).toHaveLength(7);
+    const groups = screen.getAllByRole('group', { name: /^Actions for / });
+    expect(groups.length).toBeGreaterThan(0);
+    expect(groups.length).toBeLessThan(25);
+    for (const group of groups) {
+      expect(within(group).getByRole('button', { name: 'Like' })).toBeInTheDocument();
+      expect(within(group).getByRole('button', { name: 'Shortlist' })).toBeInTheDocument();
+      expect(within(group).getByRole('button', { name: 'Detail' })).toBeInTheDocument();
+    }
     expect(screen.getByText('Card Mode')).toBeInTheDocument();
+  });
+
+  test('list mode aligns actions inside rows and preserves like, shortlist and detail controls', async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByText(/Showing 6 of 6 talents/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'List Mode' }));
+
+    const table = screen.getByRole('table');
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers.map((header) => header.textContent)).toEqual([
+      'Name', 'Role', 'Availability', 'Rate', 'Likes', 'Status', 'Actions',
+    ]);
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(7); // header + six data rows; no duplicate table header
+    const first = rows[1];
+    expect(within(first).getAllByRole('cell')).toHaveLength(7);
+    const actions = within(first).getByRole('group', { name: /^Actions for / });
+    expect(actions.parentElement.tagName).toBe('TD');
+    expect(actions.parentElement).toBe(within(first).getAllByRole('cell')[6]);
+
+    const firstLikes = within(first).getAllByRole('cell')[4].textContent;
+    fireEvent.click(within(actions).getByRole('button', { name: 'Like' }));
+    expect(within(first).getAllByRole('cell')[4]).toHaveTextContent(String(Number(firstLikes) + 1));
+
+    fireEvent.click(within(actions).getByRole('button', { name: 'Shortlist' }));
+    expect(within(actions).getByRole('button', { name: 'Shortlisted' })).toBeInTheDocument();
+    fireEvent.click(within(actions).getByRole('button', { name: 'Detail' }));
+    expect(screen.getByRole('dialog', { name: 'Talent detail drawer' })).toBeInTheDocument();
   });
 
   test('opens help modal with usage instructions', async () => {
