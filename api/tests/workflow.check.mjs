@@ -16,7 +16,7 @@ async function harness(t) {
   assert.equal(process.env.NODE_ENV, 'test', 'Use only disposable MySQL test DB');
   const db = createSequelize(databaseConfig());
   await db.authenticate();
-  const { User, Candidate, Application, AuditEvent } = defineModels(db);
+  const { User, Candidate, Application, AuditEvent, IdempotencyRecord } = defineModels(db);
   const fixtures = [], users = [];
   const tokens = createTokenService(SECRET);
   const server = createApp({ db, jwtSecret: SECRET }).listen(0, '127.0.0.1');
@@ -26,6 +26,7 @@ async function harness(t) {
     await new Promise((resolve, reject) => server.close(err => err ? reject(err) : resolve()));
     try {
       for (const { id, candidateId } of fixtures) {
+        await IdempotencyRecord.destroy({ where: { application_id: id } });
         await AuditEvent.destroy({ where: { application_id: id } });
         await Application.destroy({ where: { id } });
         await Candidate.destroy({ where: { id: candidateId } });
@@ -34,7 +35,7 @@ async function harness(t) {
     } finally { await db.close(); }
   });
   return {
-    db, User, Candidate, Application, AuditEvent,
+    db, User, Candidate, Application, AuditEvent, IdempotencyRecord,
     async fixture(status = 'New', version = 1) {
       const candidateId = randomUUID(), id = randomUUID();
       await Candidate.create({
@@ -72,9 +73,10 @@ async function harness(t) {
   };
 }
 const path = id => '/api/applications/' + id;
-const move = (ctx, id, token, toStatus, expectedVersion) =>
+const move = (ctx, id, token, toStatus, expectedVersion, idempotencyKey = randomUUID()) =>
   ctx.request(path(id) + '/transitions', {
     token, method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
     body: { toStatus, expectedVersion, reason: 'Synthetic review' }
   });
 
@@ -198,7 +200,7 @@ test('failed audit insertion rolls back MySQL application update', async t => {
   await assert.rejects(
     brokenAudit.transition(app.id, {
       toStatus: 'Contacted', expectedVersion: 1, reason: 'Synthetic'
-    }, actor.user.id),
+    }, actor.user.id, { idempotencyKey: randomUUID() }),
     /Synthetic audit failure/
   );
   const old = await ctx.Application.findByPk(app.id);

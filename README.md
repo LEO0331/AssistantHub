@@ -8,7 +8,7 @@ AssistantHub is a lightweight React talent-pool demo portal for discovering assi
 
 ## AssistantHub 2.0 roadmap (incremental upgrade)
 
-An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The proposed system adds a separately hosted Express API, Sequelize/MySQL persistence, JWT authentication, server-side RBAC, version-based optimistic concurrency, and a transactional audit trail. **PRs #2–#6 now deliver a locally runnable full-stack hiring workflow MVP:** Express/MySQL persistence, JWT/RBAC, version-checked hiring transitions, a transactional audit history, and an authenticated React workflow panel. The backend remains **not publicly deployed**; default GitHub Pages/local/mock demo flows are unchanged unless an API origin is explicitly configured.
+An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The proposed system adds a separately hosted Express API, Sequelize/MySQL persistence, JWT authentication, server-side RBAC, version-based optimistic concurrency, and a transactional audit trail. **PRs #2–#7 deliver a locally runnable full-stack hiring workflow MVP with durable idempotency:** Express/MySQL persistence, JWT/RBAC, version-checked hiring transitions, a transactional audit history, and an authenticated React workflow panel. The backend remains **not publicly deployed**; default GitHub Pages/local/mock demo flows are unchanged unless an API origin is explicitly configured.
 
 - [Architecture and phased rollout](docs/architecture-v2.md)
 - [Draft REST API contract and test scenarios](docs/api-contract.md)
@@ -18,9 +18,8 @@ An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The p
 - PR #4: JWT login, server-enforced RBAC, rate-limited authentication and in-memory API browser session.
 - PR #5: transactional hiring workflow and durable MySQL audit (API-only).
 - PR #6: connect authenticated hiring status controls and audit timeline to React (first local full-stack MVP).
-- PR #7: persistent idempotency for safe HTTP retries, request IDs and structured failure logging.
-- PR #6: integrate the real API workflow into React; first functional MVP.
-- PRs #7–#8: idempotency/failure handling and isolated public demo hardening.
+- PR #7: persistent actor-scoped idempotency, same-key safe replay, request IDs, structured logs and bounded retention (implemented).
+- PR #8: final CI/security hardening and documented deployment decisions (future).
 
 Existing `local` and `mock-api` data sources remain browser simulations (the latter is a timer, **not** an HTTP API). The GitHub Pages base path `/AssistantHub/`, output directory `build/`, CI and deployment behavior are unchanged by PR #1. Do not use synthetic profile/contact data as real hiring information.
 
@@ -36,7 +35,7 @@ Existing `local` and `mock-api` data sources remain browser simulations (the lat
 
 ## AssistantHub 2.0 backend foundation
 
-The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The new optional read-only API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication and role-protected candidate reads are included in PR #4. PR #5 adds transactional application transitions/audit; PR #6 connects an authenticated React workflow and audit timeline with explicit 409/unknown-outcome refresh. For transaction and failure-mode details see [PR #5 workflow review](docs/workflow-audit-pr5.md). See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
+The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The optional authenticated API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication and role-protected candidate reads are included in PR #4. PR #5 adds transactional application transitions/audit; PR #6 connects authenticated hiring controls and audit history; PR #7 adds durable idempotency keys and an explicit same-key retry on uncertain HTTP outcomes. For transaction and failure-mode details see [PR #5 workflow review](docs/workflow-audit-pr5.md). See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
 
 ## Tech Stack
 - React 18
@@ -55,7 +54,7 @@ The existing offline demo retains client-side state; API mode reads a separate l
 
 The [November 18, 2026 dependency assessment](docs/security-dependency-assessment-2026-11-18.md) documents current audit findings and a separate report-only workflow. A successful diagnostic check does **not** certify a clean dependency tree; application CI/security gates are unchanged. The October 5 Dependabot review is historical.
 
-## Authenticated MySQL hiring workflow (PRs #3–#6)
+## Authenticated MySQL hiring workflow (PRs #3–#7)
 
 Start the [API foundation](api/README.md), migrate and seed the local MySQL database, and configure the frontend with a **public, nonsecret origin**:
 
@@ -65,13 +64,13 @@ VITE_ASSISTANTHUB_API_BASE_URL=http://127.0.0.1:3100 npm start
 
 In the Data source selector choose **Real MySQL API (authenticated workflow)**. This mode performs **server-side** name/role/skills search, availability/rate filters, stable sorting and bounded pagination, with request cancellation and explicit failure/retry states. If the origin is unset, the API option is disabled; the existing demo remains offline. The API browser now signs in with an operator-provisioned account and sends a short-lived JWT in Authorization headers. The token stays only in React memory. Only synthetic data is served. The **API-mode hiring panel now persists status changes and audit events on MySQL** for Recruiter/Admin; local/mock shortlist and hiring actions remain browser-only. The backend is not publicly deployed; do not expose unauthenticated endpoints with real candidate records. `API_CORS_ORIGIN` must be set to the precise frontend origin in the backend environment.
 
-Workflow demo: sign in, select a candidate, choose **View hiring workflow**, inspect server status/version and paginated audit events. Recruiter/Admin may submit permitted transitions; Viewer may only read. On 409 or a network error the UI **never auto-retries a write**; it freezes mutations until you explicitly refresh from MySQL. See [PR #6 UI and recovery guide](docs/hiring-ui-pr6.md). The backend remains local-only; no real applicants or public writable accounts.
+Workflow demo: sign in, select a candidate, choose **View hiring workflow**, inspect server status/version and paginated audit events. Recruiter/Admin may submit permitted transitions; Viewer may only read. On 409 the UI requires a server refresh; on uncertain network/5xx outcomes it holds the original UUID-v4 idempotency key and exact payload and offers an **explicit same-key safe retry**. It never automatically repeats a POST or creates a new key for an uncertain write. See [PR #7 replay/retention guide](docs/idempotency-pr7.md). See [PR #6 UI and recovery guide](docs/hiring-ui-pr6.md). The backend remains local-only; no real applicants or public writable accounts.
 
 ## Security & Demo Limitations
 - This is a client-only demo: all state can be modified in browser devtools and must not be treated as secure or authoritative.
 - Imported JSON is schema-validated and size-capped, but it is still untrusted demo input; do not use this flow for sensitive data.
 - The offline/local/mock demo still has no authorization (its browser state is editable). The separate API browser requires login and server-side RBAC from PR #4.
-- No server-side audit trail exists; hire-status transitions are local only.
+- In offline local/mock modes there is no server audit; authenticated API mode persists MySQL transitions and audit events.
 - Virtualized and paginated rendering supports large demo pools, but browser memory/CPU still set the practical upper bound.
 
 ## Scripts

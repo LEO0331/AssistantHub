@@ -1,7 +1,8 @@
 /* eslint-disable react/prop-types */
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  allowedNextStatuses, fetchCandidateApplication, fetchApplicationAudit, postApplicationTransition
+  allowedNextStatuses, createIdempotencyKey, fetchCandidateApplication,
+  fetchApplicationAudit, postApplicationTransition
 } from '../services/workflowApi';
 
 const EMPTY_AUDIT = { items: [], page: 1, pageSize: 10, total: 0 };
@@ -23,6 +24,8 @@ export default function CandidateWorkflowPanel({
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [writeNotice, setWriteNotice] = useState('');
+  const [retryAttempt, setRetryAttempt] = useState(null);
+  const pendingAttemptRef = useRef(null);
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const [target, setTarget] = useState('');
   const [reason, setReason] = useState('');
@@ -52,7 +55,19 @@ export default function CandidateWorkflowPanel({
         setAudit(history);
         setTarget('');
         setReason('');
-        setNeedsRefresh(false);
+        // A GET showing unchanged version does not prove a previous POST
+        // stopped: it may still be committing. Keep its SAME key retryable.
+        const pending = pendingAttemptRef.current;
+        const stillUnknown = pending && current.id === pending.applicationId &&
+          current.version === pending.expectedVersion;
+        if (!stillUnknown) {
+          pendingAttemptRef.current = null;
+          setRetryAttempt(null);
+          setWriteNotice('');
+        } else {
+          setWriteNotice('This request may still be in flight. Only retry the exact same key and payload.');
+        }
+        setNeedsRefresh(Boolean(stillUnknown));
         setLoading(false);
       } catch (error) {
         if (!active || error?.name === 'AbortError') return;
@@ -80,25 +95,30 @@ export default function CandidateWorkflowPanel({
     setReload(value => value + 1);
   };
 
-  const submit = async event => {
-    event.preventDefault();
-    if (!canWrite || !application || saving || loading || needsRefresh ||
-      !options.includes(target) || reason.length > 500) return;
+
+  const executeAttempt = async attempt => {
+    if (saving || submitRef.current || loading) return;
     const controller = new AbortController();
     submitRef.current = controller;
     setSaving(true);
     setWriteNotice('');
     try {
       const response = await postApplicationTransition({
-        baseUrl, applicationId: application.id, accessToken,
-        toStatus: target, expectedVersion: application.version, reason,
+        baseUrl, applicationId: attempt.applicationId, accessToken,
+        toStatus: attempt.toStatus, expectedVersion: attempt.expectedVersion,
+        reason: attempt.reason, idempotencyKey: attempt.idempotencyKey,
         signal: controller.signal
       });
       if (controller.signal.aborted) return;
-      // Success means MySQL committed. Display only server-returned state.
+      // A successful replay is the same committed DB operation, not a new
+      // transition. Always re-read server status and audit after confirmation.
+      pendingAttemptRef.current = null;
+      setRetryAttempt(null);
       setApplication(response.application);
       setNeedsRefresh(true);
-      setWriteNotice('Transition committed. Reloading authoritative status and audit history.');
+      setWriteNotice(response.replayed ?
+        'Original committed result was safely replayed. Reloading status and audit history.' :
+        'Transition committed. Reloading authoritative status and audit history.');
       setPage(1);
       setReload(value => value + 1);
     } catch (error) {
@@ -111,13 +131,45 @@ export default function CandidateWorkflowPanel({
         onUnauthorized('Your role or access was changed. Sign in again.');
         return;
       }
-      // A conflict or unknown network outcome MUST NOT auto-replay this POST.
-      // Freeze mutations until the user retrieves the current database state.
+      // Network/5xx/invalid response outcome may be unknown. Preserve the
+      // exact key+payload and allow an explicit safe replay with that key.
+      // 409 or 422 is definitive; don't retry it, refresh state instead.
+      const ambiguous = error?.status == null || error.status >= 500;
+      if (ambiguous) {
+        pendingAttemptRef.current = attempt;
+        setRetryAttempt(attempt);
+      } else {
+        pendingAttemptRef.current = null;
+        setRetryAttempt(null);
+      }
       setNeedsRefresh(true);
-      setWriteNotice(error.message || 'The outcome is unknown. Refresh server state before retrying.');
+      setWriteNotice(error.message || 'Refresh the server before attempting any new transition.');
     } finally {
+      if (submitRef.current === controller) submitRef.current = null;
       if (!controller.signal.aborted) setSaving(false);
     }
+  };
+
+  const submit = event => {
+    event.preventDefault();
+    if (!canWrite || !application || saving || loading || needsRefresh ||
+      !options.includes(target) || reason.length > 500) return;
+    let idempotencyKey;
+    try {
+      idempotencyKey = createIdempotencyKey();
+    } catch (error) {
+      setNeedsRefresh(true);
+      setWriteNotice(error.message);
+      return;
+    }
+    const attempt = {
+      applicationId: application.id,
+      toStatus: target,
+      expectedVersion: application.version,
+      reason,
+      idempotencyKey
+    };
+    executeAttempt(attempt);
   };
 
   return (
@@ -201,6 +253,10 @@ export default function CandidateWorkflowPanel({
           <p>{writeNotice || 'Refresh server state and audit history before another action.'}</p>
           <button type="button" className="ui-button secondary" onClick={refresh}
             disabled={saving}>Refresh server state</button>
+          {retryAttempt && <button type="button" className="ui-button secondary"
+            onClick={() => executeAttempt(retryAttempt)} disabled={saving || loading}>
+            Retry same request safely
+          </button>}
         </div>
       )}
     </section>

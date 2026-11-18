@@ -38,7 +38,7 @@ Sequelize with explicit MySQL transactions and migrations
     |- candidates
     |- applications (status, version)
     |- audit_events (append-only business history)
-    |- idempotency_requests (planned for PR #7)
+    |- idempotency_records (PR #7 committed operations)
 ~~~
 
 Use a modular monolith, rather than separate services, to keep transaction boundaries, local development and debugging understandable. Controllers translate HTTP contracts; services enforce domain rules; database modules own persistence. Do not put authorization or workflow decisions exclusively in React.
@@ -59,7 +59,7 @@ Use a modular monolith, rather than separate services, to keep transaction bound
 | candidates | id, name, role, skills, availability, hourly_rate, created_at | synthetic demo records; use explicit query indexes |
 | applications | id, candidate_id, status, version, updated_at | candidate_id unique in MVP; version starts at 1; FK |
 | audit_events | id, application_id, actor_id, from_status, to_status, occurred_at, request_id | FK; immutable business history; transactionally inserted |
-| idempotency_requests (PR #7) | id, actor_id, key, request_hash, status, stored_result | unique key scoped by actor/operation; expired records cleaned up |
+| idempotency_records (PR #7) | id, actor_id, idempotency_key, application_id, payload_hash, response_body, request_id, completed_at, expires_at | Unique (actor_id, idempotency_key); atomic response replay; 7-day operator-controlled expiry |
 
 Exact column types and migrations are PR #2 deliverables. Define indexes based on actual query patterns, not speculative optimizations.
 
@@ -80,7 +80,7 @@ The current frontend offers a different local-only linear status sequence; it mu
 5. If update affects zero rows, distinguish not-found from stale version and return an appropriate 404 or 409. Invalid state transition is 422.
 6. If the audit write fails, roll back the status update. Never report a committed transition without its audit event.
 7. Audit history is server-authored. Client-supplied actor IDs, timestamps, prior status or version increment are not trusted.
-8. PR #5 alone does not guarantee safe retries after an unknown network outcome. Persistent idempotency keys in PR #7 close that specific gap; until then, the client must refresh before retrying.
+8. PR #7 closes PR #5's lost-HTTP-response window with a durable actor-scoped UUID-v4 Idempotency-Key, payload hash and stored response in the same transaction. Unknown outcomes may be manually retried with the exact original key/payload while retained.
 
 ### Expected concurrency example
 Two recruiters read application version 7 at Interview. Recruiter A requests Hired at version 7; Recruiter B requests Rejected at version 7. Only one conditional update may commit, yielding version 8 and exactly one audit event. The other request receives 409 Conflict with no successful-transition audit record. Concurrency tests must use real MySQL, not only mocked ORM calls.
@@ -104,7 +104,7 @@ Two recruiters read application version 7 at Interview. Recruiter A requests Hir
 4. PR #4: add authenticated API sessions and server-side authorization; do not rely on hidden UI controls.
 5. PR #5: implement transactional state transitions and audit read API (completed in local backend, real-MySQL tests).
 6. PR #6: integrate workflow controls and audit timeline into React; no duplicate browser business authority in API mode (implemented in local full-stack MVP).
-7. PR #7: implement persistent idempotency handling, structured logs, request IDs and failure-mode testing.
+7. PR #7: implement durable idempotency, explicit same-key replay, structured request logs, retention and real-MySQL failure tests (completed in local MVP).
 8. PR #8: tighten security gates, public isolated demo, deployment operations and interview guide.
 
 Only PR #6 is the functional MVP. A passed docs-only PR #1 must not be represented as a working backend or security implementation.

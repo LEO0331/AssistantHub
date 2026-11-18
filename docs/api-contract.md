@@ -1,6 +1,6 @@
 # AssistantHub 2.0 — proposed REST API contract
 
-> **Partly implemented through PR #3:** The isolated backend now has GET /api/health/live, GET /api/health/ready, GET /api/candidates, and GET /api/candidates/:id for **synthetic-only, read-only discovery**. Authentication, application transitions and audit history are implemented in the **local API** through PR #5, and an authenticated React workflow panel is connected in PR #6. Production backend deployment, durable HTTP idempotency and real applicant data remain **out of scope**. Existing local/mock-api simulations still work.
+> **Partly implemented through PR #3:** The isolated backend now has GET /api/health/live, GET /api/health/ready, GET /api/candidates, and GET /api/candidates/:id for **synthetic-only, read-only discovery**. Authentication, application transitions and audit history are implemented in the **local API** through PR #5, and an authenticated React workflow panel is connected in PR #6. PR #7 now adds durable, actor-scoped idempotency and sanitized request correlation logging. Production backend deployment and real applicant data remain **out of scope**. Existing local/mock-api simulations still work.
 
 ## 1. Protocol and conventions
 
@@ -101,7 +101,7 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 - Errors: 400 invalid body; 401/403 access errors; 404 absent/inaccessible application; 409 stale expectedVersion; 422 transition outside the state machine.
 - Permitted: New -> Contacted/Rejected; Contacted -> Interview/Rejected; Interview -> Hired/Rejected. Hired and Rejected are terminal.
 - Atomicity: one conditional version/status update and one audit insert in the **same** DB transaction. On audit failure both must roll back. When one write loses a concurrency race, it creates no success event.
-- The implemented PR #5 API does **not** promise exactly-once retries in PR #5. PR #7 introduces a persistent, actor-scoped Idempotency-Key contract with request-payload hashing, duplicate-result replay and mismatch rejection.
+- **PR #7 implemented:** Require a UUID-v4 `Idempotency-Key` header; unique key scoped to current authenticated actor. First successful 200 stores its exact JSON response atomically with transition and audit. Same actor/key/application/canonical payload returns stored 200 with `Idempotency-Replayed: true`; a different request with the same key returns `409 IDEMPOTENCY_KEY_REUSED`. Missing header returns 428; malformed returns 400. Seven-day retention is guaranteed only while records are retained; manual pruning allows future reuse.
 
 ~~~json
 {
@@ -133,13 +133,19 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 - Server-generated, append-only business event history. Do not accept a public endpoint to edit or delete audit records.
 - Failure: 401/403/404 as appropriate. Do not expose password/token material or irrelevant personal data in event payloads.
 
+### Idempotency and correlation metadata (PR #7)
+- Only `POST /api/applications/:id/transitions` requires the `Idempotency-Key` header. It is a cryptographically generated UUID-v4, unique per business attempt for the same actor. Do not include it in URLs or logs.
+- Response headers: `Idempotency-Replayed` true/false for successful transition; server-generated `X-Request-ID` on every HTTP response. CORS exact-origin config exposes those headers, not credentials.
+- Missing key 428, malformed 400, mismatch 409. For network uncertainty, retry **the same key and body**, not an altered payload or new key; browser only does this by explicit user action.
+- Seven-day retention and operator-only expired-record pruning. See [PR #7 idempotency guide](idempotency-pr7.md).
+
 ## 6. Operational endpoints (implemented in isolated PR #2 backend; not deployed)
 
 - GET /api/health/live: process liveness; no secrets or infrastructure details.
 - GET /api/health/ready: service readiness, including DB connectivity; minimal success/failure response with no credentials exposed.
 - Rate-limit and isolate health endpoints as appropriate for the deployment environment.
 
-## 7. Acceptance test matrix (PR #5 has real MySQL integration tests; PR #7 idempotency is future)
+## 7. Acceptance test matrix (PRs #5 and #7 include real MySQL transaction/race/replay tests)
 
 | Scenario | Expected result |
 | --- | --- |
@@ -150,8 +156,8 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 | Two actors concurrently modify version 7 | Exactly one successful version 8 and one audit event |
 | Audit insert fails after conditional update | Rollback; prior version/status remain |
 | Invalid pageSize or sort field | 400, no unbounded query |
-| Retried committed request with matching key (PR #7) | Stored result, no duplicate transition/audit |
-| Reused key with a different payload (PR #7) | Reject, no additional write |
+| Retried committed request with matching key | Same 200 body and audit ID, replay header true, no duplicate transition/audit |
+| Reused key with a different payload/application | 409 IDEMPOTENCY_KEY_REUSED, no additional write |
 
 Tests must exercise the real MySQL transaction/concurrency behavior and the HTTP authorization boundary. Mocks are useful for unit tests but cannot prove transactional guarantees.
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { createWorkflowService, WorkflowDomainError } from '../services/workflowService.mjs';
 import {
-  WorkflowInputError, parseApplicationId, parseAuditPagination, parseTransitionBody
+  WorkflowInputError, parseApplicationId, parseAuditPagination, parseTransitionBody, parseIdempotencyKey
 } from '../validators/workflow.mjs';
 
 function respondWithError(error, res) {
@@ -19,7 +19,11 @@ function respondWithError(error, res) {
 function handler(callback) {
   return async (req, res) => {
     try { await callback(req, res); }
-    catch (error) { respondWithError(error, res); }
+    catch (error) {
+      res.locals.operationOutcome = error instanceof WorkflowDomainError || error instanceof WorkflowInputError
+        ? error.code : 'SERVICE_UNAVAILABLE';
+      respondWithError(error, res);
+    }
   };
 }
 
@@ -41,7 +45,13 @@ export function createApplicationRouter({ db, requireRole }) {
   router.post('/:id/transitions', requireRole('recruiter', 'admin'), handler(async (req, res) => {
     const id = parseApplicationId(req.params.id);
     const input = parseTransitionBody(req.body);
-    res.status(200).json(await getService().transition(id, input, req.authUser.id));
+    const idempotencyKey = parseIdempotencyKey(req.get('Idempotency-Key'));
+    const result = await getService().transition(id, input, req.authUser.id, {
+      idempotencyKey, requestId: req.requestId
+    });
+    res.locals.operationOutcome = result.replayed ? 'replay' : 'committed';
+    res.set('Idempotency-Replayed', result.replayed ? 'true' : 'false');
+    res.status(200).json(result.body);
   }));
   return router;
 }

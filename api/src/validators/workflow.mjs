@@ -1,9 +1,9 @@
 export class WorkflowInputError extends Error {
-  constructor(message) {
+  constructor(message, status = 400, code = 'INVALID_REQUEST') {
     super(message);
     this.name = 'WorkflowInputError';
-    this.status = 400;
-    this.code = 'INVALID_REQUEST';
+    this.status = status;
+    this.code = code;
   }
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -58,4 +58,18 @@ export function parseTransitionBody(body) {
     reason = body.reason.trim() || null;
   }
   return { toStatus: body.toStatus, expectedVersion: body.expectedVersion, reason };
+}
+
+
+export function parseIdempotencyKey(value) {
+  if (value === undefined || value === '') {
+    throw new WorkflowInputError(
+      'Idempotency-Key header is required', 428, 'IDEMPOTENCY_KEY_REQUIRED'
+    );
+  }
+  if (typeof value !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    throw new WorkflowInputError('Idempotency-Key must be a UUID v4');
+  }
+  return value.toLowerCase();
 }

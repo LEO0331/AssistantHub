@@ -49,3 +49,7 @@ The **Refresh server state** control retrieves both application and audit again 
 Use an operator-provisioned Viewer to open a candidate and verify the server status/audit without a mutation form. Use a Recruiter to advance one synthetic application from New to Contacted; verify the returned version increased and one audit event appeared. Simulate a competing change with another authenticated user, then verify that the losing UI receives HTTP 409, freezes writes, and requires an explicit refresh. Switch back to local/mock modes to confirm they still behave as the offline demo and are not claimed to be persisted on MySQL.
 
 See [PR #5 workflow review](workflow-audit-pr5.md), [API contract](api-contract.md), and [PR #4 authentication review](security-auth-pr4.md) for the server invariants and security boundaries.
+
+## PR #7 update — safe response replay
+
+The preceding PR #6 recovery policy remains the baseline for version conflicts. PR #7 adds a UUID-v4 Idempotency-Key to every transition. For an unknown network/5xx result the panel offers **Retry same request safely** using the exact key, prior version, target and reason; the server replays an already committed success without a second audit. On 409 VERSION_CONFLICT or 422 the UI still requires an authoritative refresh, not a POST retry. The pending key is in memory only and is lost on page reload/close. See [PR #7 contract and retention](idempotency-pr7.md).
