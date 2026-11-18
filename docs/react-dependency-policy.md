@@ -1,5 +1,7 @@
 # React major-version dependency policy
 
+**Merged resolution, November 18, 2026:** [PR #37](https://github.com/LEO0331/AssistantHub/pull/37) retained React 18.3.1 / React DOM 18.3.1 and added regression tests and pre-install checks. The React 19 upgrade was **not merged**. The [post-merge Pages deployment](https://github.com/LEO0331/AssistantHub/actions/runs/44249787263) succeeded. See [verified current state](current-state.md).
+
 PR #37 originally attempted to update **react-dom** from 18.3.1 to 19.3.1 on its own. CI, Lighthouse and the dependency assessment all failed during strict `npm ci` with `ERESOLVE`: react-dom@19.3.1 requires react@^19.3.1, but AssistantHub currently uses react@18.3.1.
 
 Changing React alone is **also not safe**. The current React Leaflet 4.2.1 and @react-leaflet/core 2.1.0 declare React 18 and React DOM 18 peer constraints; react-copy-to-clipboard 5.1.0 also does not declare React 19 support. Forcing npm to ignore peer dependencies could leave map and clipboard behavior broken.

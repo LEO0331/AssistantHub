@@ -1,17 +1,19 @@
 # AssistantHub 系統設計審查（繁體中文）
 
+**歷史版前端設計審查（僅限離線模式）。** 本文保留原先純前端架構的資料結構與設計取捨，**不是整個儲存庫的最新架構說明**。後續 PR #2–#8 已加入**僅限本機 loopback** 的 Express/MySQL API、JWT/RBAC、樂觀鎖、交易式稽核與冪等重試；公開 GitHub Pages 仍是離線展示。已合併的 PR #39 移除了 Demo Checklist，並修正離線明細面板的聘用狀態按鈕；PR #37 維持 React/React DOM 18.3.1。最新架構請參閱 [系統架構](architecture-v2.md) 與 [目前實作狀態](current-state.md)。
+
 ## 1. 範圍與目標
-本審查聚焦於 AssistantHub 目前的前端單頁架構（React SPA），重點包含：
+本審查聚焦於 AssistantHub 原先的前端單頁架構（React SPA），重點包含：
 - 系統架構與模組邊界
 - 設計取捨與理由
 - 資料結構選型與替代方案
 - 深度技術問答準備
 
 ## 2. 高階架構
-AssistantHub 是一個不依賴後端的前端單頁應用。
+本文所討論的**公開離線模式**為不依賴後端的 React 單頁應用；後續另有需設定本機 API 才能使用的受 JWT 保護 MySQL 模式。
 
 ### 分層視角
-- 呈現層：`App.js`、`ProfileCards.js`、`SearchBar.js`、`ContactModal.js`、CSS
+- 呈現層：`App.jsx`、`ProfileCards.jsx`、`SearchBar.jsx`、`ContactModal.jsx`、CSS
 - UI 狀態層：`useReducer(uiReducer)` + 區域 `useState`
 - 持久化層：`usePersistentState`（以 localStorage 為基礎）
 - 領域/資料層：`assistantFactory` + `talentAdapter`
@@ -26,7 +28,7 @@ AssistantHub 是一個不依賴後端的前端單頁應用。
 
 ## 3. 元件與模組邊界
 
-### 核心容器（`App.js`）
+### 核心容器（`App.jsx`）
 職責：
 - 統籌狀態與 side effects
 - 載入資料
@@ -155,13 +157,13 @@ AssistantHub 是一個不依賴後端的前端單頁應用。
 - shortlist 與 seed 具本地持久化能力
 
 ### 弱點 / 風險
-- `App.js` 體積大，擴充後審查與維護成本上升
+- `App.jsx` 體積大，擴充後審查與維護成本上升
 - 全前端本地資料，不具多使用者一致性或審計能力
-- 無後端契約驗證（僅前端 schema guard）
+- **原始離線模式**不使用後端契約；後續新增的 API 模式已驗證伺服器回應並具備真實 MySQL 整合測試
 - reducer action 字串有 typo 風險
 
 ### 未來演進方向
-- 將 `App.js` 拆分為 feature hooks（如 `useTalentPool`、`useShortlistFlow`、`useDemoImportExport`）
+- 將 `App.jsx` 拆分為 feature hooks（如 `useTalentPool`、`useShortlistFlow`、`useDemoImportExport`）
 - 若 id 型操作增長，改用正規化資料結構
 - adapter 接入真實 API，補齊錯誤處理/重試/取消機制
 - 導入 TypeScript 或更強 schema 層提升契約可靠性
@@ -190,7 +192,7 @@ AssistantHub 是一個不依賴後端的前端單頁應用。
 
 ### Q6. 轉真實後端的路徑是什麼？
 建議答法：
-- 先替換 `mock-api` adapter 實作，保持 `loadTalentPool` 介面不變，再逐步把 shortlist/inquiry 寫入後端，降低 UI 衝擊。
+- **已實作的演進路徑：**保留離線 `mock-api` 模擬器，另外新增受驗證的 API browser；僅在明確設定 API 來源時，候選人查詢、聘用狀態與稽核才透過 MySQL。離線 shortlist/inquiry 仍由瀏覽器管理；正式環境尚需權限隔離與個資治理。
 
 ### Q7. 匯入流程目前有哪些正確性防護？
 建議答法：
@@ -208,4 +210,4 @@ AssistantHub 是一個不依賴後端的前端單頁應用。
 - 若從 demo 走向 production，RBAC（角色權限）如何落地？
 
 ## 8. 結論
-以目前「前端 demo + 可重現資料 + 中型列表」目標來看，架構是務實且可運作的。主要技術債不在於錯誤的資料結構，而是協調邏輯集中在 `App.js`，以及缺乏後端權威狀態。現有模組邊界（`talentAdapter`、reducer、hooks）已提供後續漸進式強化的良好基礎。
+原始「離線前端 demo + 可重現資料 + 中型列表」設計仍務實可行。部分協調邏輯集中在 `App.jsx` 是維護成本；但**後續 API 模式已使用 MySQL 作為聘用流程的權威資料來源**，公開離線模式則沒有後端權威狀態。現有模組邊界（`talentAdapter`、reducer、hooks）已提供後續漸進式強化的良好基礎。
