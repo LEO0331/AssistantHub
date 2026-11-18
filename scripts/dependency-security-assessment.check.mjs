@@ -33,6 +33,33 @@ test('production and development-only findings are distinguished, without claimi
   assert.match(renderReport(report), /GHSA-test/);
 });
 
+test('API audit report retains production advisories, versions and fix metadata', () => {
+  const apiLock = {
+    name: 'assistanthub-api', lockfileVersion: 3,
+    packages: {
+      '': {},
+      'node_modules/mysql2': { version: '3.24.6' },
+      'node_modules/umzug/node_modules/glob': { version: '10.5.0', dev: true }
+    }
+  };
+  const all = makeAudit({ total: 2, high: 1, moderate: 1 }, {
+    mysql2: { severity: 'moderate', isDirect: true, range: '<3.30.0',
+      via: [{title:'test issue',url:'https://github.com/advisories/GHSA-fake',range:'<3.30.0'}], fixAvailable: { name:'mysql2',version:'3.30.0' } },
+    glob: { severity: 'high', isDirect: false, via: ['minimatch'], fixAvailable:false }
+  });
+  const prod = makeAudit({ total: 1, moderate: 1 }, { mysql2: all.vulnerabilities.mysql2 });
+  const result = summarizeAudits(all, prod, apiLock);
+  const text = renderReport(result);
+  expectTextIncludes(text, ['assistanthub-api', 'mysql2', '3.24.6', 'GHSA-fake',
+    'Production (--omit=dev)', 'glob']);
+  assert.equal(result.packages.find(p => p.name === 'mysql2').productionAuditMatch, true);
+  assert.equal(result.packages.find(p => p.name === 'glob').lockfileDevOnly, true);
+});
+
+function expectTextIncludes(text, tokens) {
+  for (const token of tokens) assert.ok(text.includes(token), 'Missing token: ' + token);
+}
+
 test('cannot report production count larger than all-dependency count', () => {
   const all = makeAudit({ total: 0 }, {});
   const prod = makeAudit({ total: 1, high: 1 }, {foo:{severity:'high',via:[]}});

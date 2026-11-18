@@ -65,9 +65,9 @@ export function summarizeAudits(allAudit, prodAudit, lockfile) {
   };
 }
 
-function runNpmAudit(omitDev = false) {
+function runNpmAudit(omitDev = false, cwd = process.cwd()) {
   const args = ['audit', '--json', '--audit-level=low', ...(omitDev ? ['--omit=dev'] : [])];
-  const child = spawnSync('npm', args, { encoding: 'utf8', maxBuffer: 25 * 1024 * 1024, timeout: 180000 });
+  const child = spawnSync('npm', args, { cwd, encoding: 'utf8', maxBuffer: 25 * 1024 * 1024, timeout: 180000 });
   if (child.error) throw child.error;
   if (child.status !== 0 && child.status !== 1) {
     throw new Error('npm ' + args.join(' ') + ' failed with status ' + child.status + ': ' + (child.stderr || '').slice(0, 600));
@@ -86,7 +86,7 @@ function escapeCell(value) {
 export function renderReport(report) {
   const {overall:o, productionOnly:p} = report;
   const lines = [
-    '# AssistantHub dependency security assessment',
+    '# ' + report.rootPackage + ' dependency security assessment',
     '',
     'Generated: ' + report.generatedAt,
     '',
@@ -124,12 +124,20 @@ export function renderReport(report) {
 }
 
 function main() {
-  const lock = JSON.parse(readFileSync(resolve('package-lock.json'), 'utf8'));
-  const report = summarizeAudits(runNpmAudit(false), runNpmAudit(true), lock);
+  // Audit both lockfiles independently; root and api are separate npm trees.
+  const args = process.argv.slice(2);
+  if (args.length > 1 || (args.length === 1 && args[0] !== '--api')) {
+    throw new Error('Usage: node scripts/dependency-security-assessment.mjs [--api]');
+  }
+  const api = args[0] === '--api';
+  const cwd = resolve(api ? 'api' : '.');
+  const lock = JSON.parse(readFileSync(resolve(cwd, 'package-lock.json'), 'utf8'));
+  const report = summarizeAudits(runNpmAudit(false, cwd), runNpmAudit(true, cwd), lock);
   const markdown = renderReport(report);
   mkdirSync('.security-reports', { recursive: true });
-  writeFileSync('.security-reports/dependency-audit.json', JSON.stringify(report, null, 2) + '\n');
-  writeFileSync('.security-reports/dependency-audit.md', markdown);
+  const prefix = api ? 'api-dependency-audit' : 'dependency-audit';
+  writeFileSync(resolve('.security-reports', prefix + '.json'), JSON.stringify(report, null, 2) + '\n');
+  writeFileSync(resolve('.security-reports', prefix + '.md'), markdown);
   console.log(markdown);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
   if (report.overall.total > 0) {
