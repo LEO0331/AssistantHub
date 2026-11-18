@@ -6,3 +6,7 @@
 .api-candidate { border: 1px solid var(--border-cream); background: var(--bg-ivory); border-radius: var(--radius-lg); padding: 18px; }
 .api-candidate h2 { font-size: 1.18rem; margin: 0 0 8px; }
 .api-candidate p { margin: 6px 0; overflow-wrap: anywhere; }
+
+.api-signin-form { max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
+.api-signin-form label { font-size: 0.9rem; color: var(--text-secondary); }
+.api-signin-form button { align-self: flex-start; }

@@ -3,6 +3,11 @@ import { test } from 'node:test';
 import { createApp } from '../src/app.mjs';
 import { databaseConfig } from '../src/config.mjs';
 import { createSequelize } from '../src/db/connection.mjs';
+import { createTokenService } from '../src/auth/tokens.mjs';
+import { provisionUser } from '../src/auth/users.mjs';
+import { defineModels } from '../src/db/models.mjs';
+import { randomUUID } from 'node:crypto';
+const TEST_SECRET = 'ci_only_jwt_signing_secret_do_not_use_outside_tests_12345';
 import { DEMO_COUNT } from '../src/db/seed.mjs';
 
 async function serve(t, corsOrigin = '') {
@@ -10,14 +15,17 @@ async function serve(t, corsOrigin = '') {
   const db = createSequelize(databaseConfig());
   t.after(() => db.close());
   await db.authenticate();
-  const server = createApp({ db, corsOrigin }).listen(0, '127.0.0.1');
+  const { User } = defineModels(db);
+  const user = await provisionUser({ User, email: 'viewer-' + randomUUID() + '@test.example', password: 'Strong-CI-Password-For-Viewer-123!', role: 'viewer' });
+  const accessToken = await createTokenService(TEST_SECRET).issue(user.id);
+  const server = createApp({ db, corsOrigin, jwtSecret: TEST_SECRET }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   t.after(() => new Promise((resolve, reject) => server.close(err => err ? reject(err) : resolve())));
   const base = 'http://127.0.0.1:' + server.address().port;
   return {
     base,
     get: async (path, headers) => {
-      const response = await fetch(base + path, { headers });
+      const response = await fetch(base + path, { headers: { Authorization: 'Bearer ' + accessToken, ...headers } });
       const body = await response.json();
       return { status: response.status, body, headers: response.headers };
     }

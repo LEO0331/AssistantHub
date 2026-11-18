@@ -29,17 +29,23 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 ## 2. Authentication
 
 ### POST /api/auth/login
-- Auth: public (subject to rate limiting).
+- Auth: public for login (in-memory per-IP failed-attempt throttling). No public registration.
 - Body: email, password.
 - Success 200: accessToken, tokenType ("Bearer"), expiresIn, user { id, role }.
 - Failure: 400 invalid shape; 401 generic invalid credentials; 429 throttled.
 - Hash and verify passwords server-side. Do not support public signup or place credentials in the static demo bundle.
-- Refresh/logout/session-revocation policy must be explicitly decided in PR #4 before a public authenticated service is released.
+- PR #4: short-lived 15-minute JWT, no refresh endpoint or server-side logout. Frontend discards access token on local sign-out and re-authenticates after 401; server checks is_active and current role on every protected request.
 
-## 3. Candidate discovery (read-only synthetic implementation in PR #3; RBAC planned for PR #4)
+### GET /api/auth/me (implemented PR #4)
+- Auth: Bearer JWT; returns { user: { id, email, role } }, no password hash.
+
+### GET /api/admin/users/summary (implemented PR #4)
+- Auth: admin-only Bearer JWT. Returns aggregate total, active, and counts by role; Viewer/Recruiter receive 403.
+
+## 3. Candidate discovery (read-only synthetic implementation in PR #3, protected by PR #4 RBAC)
 
 ### GET /api/candidates
-- **Current PR #3:** Unauthenticated access to synthetic-only summary fields (id, name, role, skills, availability, hourlyRateUsd). No contact details or personal data. **Planned PR #4:** Viewer/Recruiter/Admin protected access.
+- **Current PR #4:** Authenticated Viewer/Recruiter/Admin access to synthetic-only summary fields (id, name, role, skills, availability, hourlyRateUsd). 401 without valid Bearer JWT. No contact details.
 - Optional query: q (max 100 characters; matches name, role, and skills), role, availability, rate (all, under40, 40to60, over60), sort (nameAsc, rateAsc, rateDesc), page (1–1000), pageSize (1–96). Unknown or malformed query parameters return 400.
 - Success 200: { items: [candidateSummary], page, pageSize, total }.
 - Sort keys must be allowlisted; SQL parameters must be bound, not concatenated.
@@ -62,7 +68,7 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 ~~~
 
 ### GET /api/candidates/:id
-- **Current PR #3:** Unauthenticated synthetic-only response; RBAC to follow in PR #4.
+- **Current PR #4:** Bearer JWT required, Viewer/Recruiter/Admin; synthetic-only response.
 - Success 200: synthetic candidate detail with the same allowlisted fields as the list response.
 - Failure 404: record missing or unavailable to the caller.
 

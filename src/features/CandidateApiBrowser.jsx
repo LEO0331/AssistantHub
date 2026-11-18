@@ -3,11 +3,14 @@ import React, { useEffect, useState } from 'react';
 import { AVAILABILITY_OPTIONS, TALENT_ROLES } from '../data/assistantFactory';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { fetchCandidatePage } from '../services/candidateApi';
+import CandidateApiSignIn from './CandidateApiSignIn';
 
 const PAGE_SIZES = [12, 24, 48, 96];
 const EMPTY = { items: [], total: 0, page: 1, pageSize: 12 };
 
 export default function CandidateApiBrowser({ baseUrl, onBack }) {
+  const [session, setSession] = useState(null);
+  const [sessionNotice, setSessionNotice] = useState('');
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('');
   const [availability, setAvailability] = useState('');
@@ -23,8 +26,7 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
   const totalPages = Math.max(1, Math.ceil(result.total / pageSize));
 
   useEffect(() => {
-    if (!baseUrl) {
-      setError('Candidate API is not configured. Use the local demo or configure a backend URL.');
+    if (!baseUrl || !session?.accessToken) {
       setLoading(false);
       return undefined;
     }
@@ -34,22 +36,34 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
     setError('');
     fetchCandidatePage({
       baseUrl, q: debouncedQuery, role, availability, rate, sort,
-      page, pageSize, signal: controller.signal
+      page, pageSize, accessToken: session.accessToken, signal: controller.signal
     }).then(data => {
       if (active) { setResult(data); setLoading(false); }
     }).catch(err => {
       if (!active || err?.name === 'AbortError') return;
+      if (err?.status === 401) {
+        setResult(EMPTY);
+        setSession(null);
+        setSessionNotice('Session expired or access revoked. Please sign in again.');
+        setLoading(false);
+        return;
+      }
       setResult(EMPTY);
       setError(err.message);
       setLoading(false);
     });
     return () => { active = false; controller.abort(); };
-  }, [baseUrl, debouncedQuery, role, availability, rate, sort, page, pageSize, retry]);
+  }, [baseUrl, session?.accessToken, debouncedQuery, role, availability, rate, sort, page, pageSize, retry]);
 
   const change = (setter) => event => {
     setter(event.target.value);
     setPage(1);
   };
+
+  if (!session) {
+    return <CandidateApiSignIn baseUrl={baseUrl} onBack={onBack} notice={sessionNotice}
+      onSuccess={value => { setSessionNotice(''); setSession(value); }} />;
+  }
 
   return (
     <div className="app-shell">
@@ -63,6 +77,9 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
         <section className="controls-panel" aria-label="API candidate search controls">
           <div className="api-browser-actions">
             <button type="button" className="ui-button secondary" onClick={onBack}>Return to local demo</button>
+            <button type="button" className="ui-button secondary"
+              onClick={() => { setSession(null); setResult(EMPTY); setSessionNotice(''); }}>Sign out of API</button>
+            <span className="json-status">Signed in as {session.user.role}</span>
             <span className="json-status">Data source: Express/MySQL API (read-only)</span>
           </div>
           <div className="api-browser-filters">

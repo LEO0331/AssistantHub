@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createApp } from '../src/app.mjs';
 import { databaseConfig } from '../src/config.mjs';
+const TEST_SECRET = 'ci_only_jwt_signing_secret_do_not_use_outside_tests_12345';
 
 async function baseUrl(t, db) {
-  const server = createApp({ db }).listen(0, '127.0.0.1');
+  const server = createApp({ db, jwtSecret: TEST_SECRET }).listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   t.after(() => new Promise((resolve, reject) =>
     server.close((err) => err ? reject(err) : resolve())
@@ -36,8 +37,8 @@ test('readiness fails closed without leaking connection details or enabling publ
   assert.deepEqual(JSON.parse(body), { status: 'unavailable' });
   assert.doesNotMatch(body, /secret-db|password/);
   const blocked = await fetch(url + '/api/candidates');
-  assert.equal(blocked.status, 503);
-  assert.equal((await blocked.json()).error.code, 'SERVICE_UNAVAILABLE');
+  assert.equal(blocked.status, 401);
+  assert.equal((await blocked.json()).error.code, 'UNAUTHORIZED');
 });
 
 test('configuration requires explicit database credentials and rejects invalid ports', () => {

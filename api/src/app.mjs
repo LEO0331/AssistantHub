@@ -1,12 +1,37 @@
 import express from 'express';
 import { createCandidateRouter } from './routes/candidates.mjs';
+import { createAuthRouter } from './routes/auth.mjs';
+import { createAuthMiddleware } from './auth/middleware.mjs';
+import { createTokenService } from './auth/tokens.mjs';
+import { createLoginLimiter } from './auth/limiter.mjs';
+import { defineModels } from './db/models.mjs';
 
-export function createApp({ db, corsOrigin = '' }) {
+export function createApp({ db, corsOrigin = '', jwtSecret, loginLimiter }) {
   if (!db || typeof db.authenticate !== 'function') {
     throw new TypeError('createApp requires a database connection with authenticate()');
   }
   const app = express();
   app.disable('x-powered-by');
+  const tokens = createTokenService(jwtSecret);
+  let models;
+  const getModels = () => { models ||= defineModels(db); return models; };
+  const getUserModel = () => getModels().User;
+  const auth = createAuthMiddleware({ tokens, getUserModel });
+  const limiter = loginLimiter || createLoginLimiter();
+
+  app.use(express.json({ limit: '4kb', strict: true }));
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    res.vary('Origin');
+    const origin = req.get('Origin');
+    if (corsOrigin && origin === corsOrigin) {
+      res.set('Access-Control-Allow-Origin', corsOrigin);
+      res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type');
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(corsOrigin && origin === corsOrigin ? 204 : 403);
+    next();
+  });
 
   const disableCache = (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
@@ -25,12 +50,40 @@ export function createApp({ db, corsOrigin = '' }) {
     }
   });
 
-  // Synthetic candidate browsing is temporarily read-only and unauthenticated.
-  // Do not add real candidate records or expose this backend publicly before PR #4.
-  app.use('/api/candidates', createCandidateRouter({ db, corsOrigin }));
+  app.use('/api/auth', createAuthRouter({
+    tokens, getUserModel, limiter, requireAuth: auth.requireAuth
+  }));
+  app.get('/api/admin/users/summary', auth.requireAuth, auth.requireRole('admin'), async (_req, res) => {
+    try {
+      const User = getUserModel();
+      const [total, active, viewer, recruiter, admin] = await Promise.all([
+        User.count(), User.count({ where: { is_active: true } }),
+        User.count({ where: { role: 'viewer' } }),
+        User.count({ where: { role: 'recruiter' } }),
+        User.count({ where: { role: 'admin' } })
+      ]);
+      return res.status(200).json({ total, active, byRole: { viewer, recruiter, admin } });
+    } catch {
+      return res.status(503).json({ error: {
+        code: 'SERVICE_UNAVAILABLE', message: 'Admin service temporarily unavailable'
+      } });
+    }
+  });
 
-  // Auth, applications, and audit routes are deliberately not implemented yet.
+  app.use('/api/candidates', auth.requireAuth,
+    auth.requireRole('viewer', 'recruiter', 'admin'),
+    createCandidateRouter({ db }));
+
+  // Application transitions and audit history remain future PRs.
   app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not found' } }));
-  app.use((_err, _req, res, _next) => res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal error' } }));
+  app.use((err, _req, res, _next) => {
+    if (err.type === 'entity.too.large') {
+      return res.status(413).json({ error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body too large' } });
+    }
+    if (err instanceof SyntaxError && 'body' in err) {
+      return res.status(400).json({ error: { code: 'INVALID_JSON', message: 'Invalid JSON body' } });
+    }
+    return res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal error' } });
+  });
   return app;
 }

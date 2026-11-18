@@ -20,31 +20,13 @@ function requestHandler(work) {
   };
 }
 
-// Only a single explicitly configured origin is allowed for read-only,
-// synthetic data. No wildcard, credentials, or auth token handling.
-function corsFor(origin) {
-  return (req, res, next) => {
-    res.vary('Origin');
-    const caller = req.get('Origin');
-    if (origin && caller === origin) {
-      res.set('Access-Control-Allow-Origin', origin);
-      res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-      res.set('Access-Control-Allow-Headers', 'Accept');
-    }
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(origin && caller === origin ? 204 : 403);
-    }
-    next();
-  };
-}
-
-export function createCandidateRouter({ db, corsOrigin = '' }) {
+export function createCandidateRouter({ db }) {
   // Initialize models only on candidate requests. Health-check stubs need not
   // emulate Sequelize; production still uses the real DB and auth boundary.
   let service;
   const getService = () => { service ||= createCandidateService(db); return service; };
   const router = Router();
-  router.use(corsFor(corsOrigin), noStore);
+  router.use(noStore);
   router.get('/', requestHandler(async (req, res) => {
     const query = parseCandidateQuery(req.query);
     return res.status(200).json(await getService().list(query));

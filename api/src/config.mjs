@@ -1,4 +1,5 @@
 import process from 'node:process';
+import { validateJwtSecret } from './auth/tokens.mjs';
 
 function port(value, name, fallback) {
   const raw = value ?? String(fallback);
@@ -38,9 +39,11 @@ export function serverConfig(env = process.env) {
       throw new Error('API_CORS_ORIGIN must be an exact HTTPS or loopback HTTP origin');
     }
   }
+  validateJwtSecret(env.AUTH_JWT_SECRET);
   return {
     host: env.API_HOST || '127.0.0.1',
     port: port(env.API_PORT, 'API_PORT', 3100),
-    corsOrigin
+    corsOrigin,
+    jwtSecret: env.AUTH_JWT_SECRET
   };
 }

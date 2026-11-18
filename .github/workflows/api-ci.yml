@@ -25,6 +25,7 @@ jobs:
       DB_USER: assistanthub_test
       DB_PASSWORD: ci_local_only_password
       NODE_ENV: test
+      AUTH_JWT_SECRET: ci_only_jwt_signing_secret_do_not_use_outside_tests_12345
     services:
       mysql:
         image: mysql:8.4
