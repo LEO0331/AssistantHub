@@ -83,7 +83,8 @@ async function workflowRequest({ baseUrl, path, accessToken, method = 'GET', bod
 }
 
 export function allowedNextStatuses(status) {
-  return HIRING_TRANSITIONS[status] || [];
+  return Object.prototype.hasOwnProperty.call(HIRING_TRANSITIONS, status)
+    ? HIRING_TRANSITIONS[status] : [];
 }
 
 export async function fetchCandidateApplication({ baseUrl, candidateId, accessToken, signal, fetchImpl }) {
