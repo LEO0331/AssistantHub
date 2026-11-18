@@ -1,6 +1,7 @@
 import express from 'express';
+import { createCandidateRouter } from './routes/candidates.mjs';
 
-export function createApp({ db }) {
+export function createApp({ db, corsOrigin = '' }) {
   if (!db || typeof db.authenticate !== 'function') {
     throw new TypeError('createApp requires a database connection with authenticate()');
   }
@@ -24,8 +25,11 @@ export function createApp({ db }) {
     }
   });
 
-  // No candidate/application/auth routes until follow-up PRs. This backend is
-  // not an unauthenticated public candidate search API.
+  // Synthetic candidate browsing is temporarily read-only and unauthenticated.
+  // Do not add real candidate records or expose this backend publicly before PR #4.
+  app.use('/api/candidates', createCandidateRouter({ db, corsOrigin }));
+
+  // Auth, applications, and audit routes are deliberately not implemented yet.
   app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not found' } }));
   app.use((_err, _req, res, _next) => res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal error' } }));
   return app;

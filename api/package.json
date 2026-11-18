@@ -12,7 +12,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:seed": "node scripts/seed.mjs",
     "test": "node --test tests/*.check.mjs",
-    "check": "node --check src/app.mjs && node --check src/server.mjs && node --check src/db/connection.mjs && node --check src/db/models.mjs && node --check src/db/migrator.mjs && node --check src/db/seed.mjs && node --check migrations/001-initial.mjs"
+    "check": "node --check src/app.mjs && node --check src/server.mjs && node --check src/db/connection.mjs && node --check src/db/models.mjs && node --check src/db/migrator.mjs && node --check src/db/seed.mjs && node --check migrations/001-initial.mjs && node --check src/routes/candidates.mjs && node --check src/services/candidateService.mjs && node --check src/validators/candidateQuery.mjs"
   },
   "dependencies": {
     "express": "5.3.0",

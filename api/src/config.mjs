@@ -28,8 +28,19 @@ export function databaseConfig(env = process.env) {
 }
 
 export function serverConfig(env = process.env) {
+  const corsOrigin = env.API_CORS_ORIGIN || '';
+  if (corsOrigin) {
+    let parsed;
+    try { parsed = new URL(corsOrigin); }
+    catch { throw new Error('API_CORS_ORIGIN must be a valid origin'); }
+    if (parsed.origin !== corsOrigin || !['https:', 'http:'].includes(parsed.protocol) ||
+      (parsed.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(parsed.hostname))) {
+      throw new Error('API_CORS_ORIGIN must be an exact HTTPS or loopback HTTP origin');
+    }
+  }
   return {
     host: env.API_HOST || '127.0.0.1',
-    port: port(env.API_PORT, 'API_PORT', 3100)
+    port: port(env.API_PORT, 'API_PORT', 3100),
+    corsOrigin
   };
 }

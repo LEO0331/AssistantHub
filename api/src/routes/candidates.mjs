@@ -1,0 +1,56 @@
+import { Router } from 'express';
+import { createCandidateService } from '../services/candidateService.mjs';
+import { CandidateQueryError, parseCandidateQuery, parseCandidateId } from '../validators/candidateQuery.mjs';
+
+const noStore = (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); };
+
+function requestHandler(work) {
+  return async (req, res) => {
+    try {
+      await work(req, res);
+    } catch (error) {
+      if (error instanceof CandidateQueryError) {
+        return res.status(400).json({ error: { code: 'INVALID_QUERY', message: error.message } });
+      }
+      // Database failures are deliberately not shown to the browser.
+      return res.status(503).json({
+        error: { code: 'SERVICE_UNAVAILABLE', message: 'Candidate service temporarily unavailable' }
+      });
+    }
+  };
+}
+
+// Only a single explicitly configured origin is allowed for read-only,
+// synthetic data. No wildcard, credentials, or auth token handling.
+function corsFor(origin) {
+  return (req, res, next) => {
+    res.vary('Origin');
+    const caller = req.get('Origin');
+    if (origin && caller === origin) {
+      res.set('Access-Control-Allow-Origin', origin);
+      res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Accept');
+    }
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(origin && caller === origin ? 204 : 403);
+    }
+    next();
+  };
+}
+
+export function createCandidateRouter({ db, corsOrigin = '' }) {
+  const service = createCandidateService(db);
+  const router = Router();
+  router.use(corsFor(corsOrigin), noStore);
+  router.get('/', requestHandler(async (req, res) => {
+    const query = parseCandidateQuery(req.query);
+    return res.status(200).json(await service.list(query));
+  }));
+  router.get('/:id', requestHandler(async (req, res) => {
+    const id = parseCandidateId(req.params.id);
+    const candidate = await service.detail(id);
+    if (!candidate) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Candidate not found' } });
+    return res.status(200).json(candidate);
+  }));
+  return router;
+}
