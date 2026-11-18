@@ -11,6 +11,9 @@ on:
       - 'scripts/dependency-security-assessment.check.mjs'
       - '.github/workflows/dependency-security-assessment.yml'
       - 'docs/security-dependency-assessment-2026-11-18.md'
+      - 'docs/dependency-triage-2026-11-18.md'
+      - 'api/package.json'
+      - 'api/package-lock.json'
   workflow_dispatch:
 
 permissions:
@@ -38,5 +41,8 @@ jobs:
       - name: Test audit report parser
         run: node --test scripts/dependency-security-assessment.check.mjs
 
-      - name: Audit all and production-only dependencies
+      - name: Audit frontend all and production-only dependencies
         run: node scripts/dependency-security-assessment.mjs
+
+      - name: Audit API all and production-only dependencies
+        run: node scripts/dependency-security-assessment.mjs --api
