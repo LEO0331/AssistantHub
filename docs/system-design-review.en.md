@@ -13,7 +13,7 @@ This historical review covers the original frontend-only architecture of Assista
 The **public/offline mode described in this review** is a single-page React application with no backend dependency. The optional, separately configured authenticated local API mode was implemented later.
 
 ### Layered view
-- Presentation layer: `App.jsx`, `ProfileCards.js`, `SearchBar.js`, `ContactModal.js`, CSS
+- Presentation layer: `App.jsx`, `ProfileCards.jsx`, `SearchBar.jsx`, `ContactModal.jsx`, CSS
 - UI state layer: `useReducer(uiReducer)` + local `useState`
 - Persistence layer: `usePersistentState` (localStorage-backed)
 - Domain/data layer: `assistantFactory` + `talentAdapter`

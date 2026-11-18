@@ -13,7 +13,7 @@
 本文所討論的**公開離線模式**為不依賴後端的 React 單頁應用；後續另有需設定本機 API 才能使用的受 JWT 保護 MySQL 模式。
 
 ### 分層視角
-- 呈現層：`App.jsx`、`ProfileCards.js`、`SearchBar.js`、`ContactModal.js`、CSS
+- 呈現層：`App.jsx`、`ProfileCards.jsx`、`SearchBar.jsx`、`ContactModal.jsx`、CSS
 - UI 狀態層：`useReducer(uiReducer)` + 區域 `useState`
 - 持久化層：`usePersistentState`（以 localStorage 為基礎）
 - 領域/資料層：`assistantFactory` + `talentAdapter`
