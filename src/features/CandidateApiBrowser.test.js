@@ -5,10 +5,17 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom';
 import CandidateApiBrowser from './CandidateApiBrowser';
 import { fetchCandidatePage, loginCandidateApi } from '../services/candidateApi';
+import { fetchCandidateApplication, fetchApplicationAudit } from '../services/workflowApi';
 
 jest.mock('../services/candidateApi', () => ({
   fetchCandidatePage: jest.fn(),
   loginCandidateApi: jest.fn()
+}));
+jest.mock('../services/workflowApi', () => ({
+  ...jest.requireActual('../services/workflowApi'),
+  fetchCandidateApplication: jest.fn(),
+  fetchApplicationAudit: jest.fn(),
+  postApplicationTransition: jest.fn()
 }));
 const demo = (id, role = 'Project Coordinator') => ({
   id, name: 'Demo Candidate ' + id, role,
@@ -32,6 +39,12 @@ describe('read-only API candidate browser with authentication', () => {
   beforeEach(() => {
     loginCandidateApi.mockReset().mockResolvedValue(session);
     fetchCandidatePage.mockReset();
+    fetchCandidateApplication.mockReset().mockResolvedValue({
+      id: '00000000-0000-4000-8000-000000000101',
+      candidateId: '00000000-0000-4000-8000-000000000001',
+      status: 'New', version: 1, updatedAt: '2026-11-18T02:00:00.000Z'
+    });
+    fetchApplicationAudit.mockReset().mockResolvedValue({ items: [], page: 1, pageSize: 10, total: 0 });
     localStorage.clear();
   });
 
@@ -108,4 +121,26 @@ describe('read-only API candidate browser with authentication', () => {
     expect(screen.getByText('Sign in to API')).toBeInTheDocument();
     expect(screen.queryByText('Demo Candidate NEW')).not.toBeInTheDocument();
   });
+
+  test('links a selected API candidate to server workflow and clears the panel on sign-out', async () => {
+    const id = '00000000-0000-4000-8000-000000000001';
+    fetchCandidatePage.mockResolvedValue({
+      items: [demo(id)], page: 1, pageSize: 12, total: 1
+    });
+    render(<CandidateApiBrowser baseUrl="http://127.0.0.1:3100" onBack={() => {}} />);
+    await login();
+    await screen.findByText('Demo Candidate ' + id);
+    fireEvent.click(screen.getByText('View hiring workflow for Demo Candidate ' + id));
+    await waitFor(() => expect(fetchCandidateApplication).toHaveBeenCalledWith(
+      expect.objectContaining({ candidateId: id, accessToken: session.accessToken })
+    ));
+    expect(await screen.findByText('New')).toBeInTheDocument();
+    expect(screen.getByText(/Viewer access: read-only/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Sign out of API'));
+    expect(screen.queryByLabelText('Candidate hiring workflow')).not.toBeInTheDocument();
+    expect(screen.getByText('Sign in to API')).toBeInTheDocument();
+    expect(localStorage.getItem('accessToken')).toBeNull();
+  });
+
+
 });

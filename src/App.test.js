@@ -409,7 +409,7 @@ describe('App integration', () => {
       fireEvent.change(screen.getByLabelText('API password'), { target: { value: 'test-password' } });
       fireEvent.click(screen.getByText('Sign in to API'));
       await waitFor(() => expect(screen.getByText('Demo Candidate 01')).toBeInTheDocument());
-      expect(screen.getByText(/read-only synthetic records/i)).toBeInTheDocument();
+      expect(screen.getByText(/Synthetic MySQL candidates with authenticated hiring workflow/i)).toBeInTheDocument();
       fireEvent.click(screen.getByText('Return to local demo'));
       await waitFor(() => expect(screen.getByLabelText('Data source')).toHaveValue('local'));
     } finally {
