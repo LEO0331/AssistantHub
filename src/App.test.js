@@ -422,9 +422,13 @@ describe('App integration', () => {
     const exported = JSON.parse(screen.getByText('Export Shortlist CSV').getAttribute('data-export-rows'));
     expect(exported).toHaveLength(1);
     expect(exported[0].name).toBe("'" + importPayload.shortlist[0].name);
-    expect(exported[0].role).toBe("'" + importPayload.shortlist[0].role);
-    expect(exported[0].email).toBe("'" + importPayload.shortlist[0].email);
-    expect(exported[0].phone).toBe("'" + importPayload.shortlist[0].phone);
+    // Existing import behavior trims leading whitespace before persisting.
+    // CSV must protect the actual persisted value, without changing it.
+    expect(original[0].role).toBe('+Role');
+    expect(exported[0].role).toBe("'" + original[0].role);
+    expect(exported[0].email).toBe("'" + original[0].email);
+    expect(original[0].phone).toBe('=123');
+    expect(exported[0].phone).toBe("'" + original[0].phone);
     expect(JSON.parse(localStorage.getItem('talentShortlist'))[0].name).toBe(importPayload.shortlist[0].name);
   });
 
