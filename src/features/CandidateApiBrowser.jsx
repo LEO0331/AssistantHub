@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React, { useEffect, useState } from 'react';
 import { AVAILABILITY_OPTIONS, TALENT_ROLES } from '../data/assistantFactory';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
