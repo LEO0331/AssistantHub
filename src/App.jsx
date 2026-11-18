@@ -470,8 +470,8 @@ function App() {
     dispatchUi({ type: 'resetFilters' });
     setControlStatus(
       fromUrl
-        ? 'Demo scenario loaded from URL preset.'
-        : 'Demo scenario loaded. Try: filter -> shortlist -> advance status -> export.'
+        ? 'Sample demo loaded from URL preset.'
+        : 'Sample demo loaded: 500 fictional profiles. Local shortlist and inquiries cleared.'
     );
   }, [setSeed, setShortlistedTalent, setTalentSource]);
 
@@ -635,8 +635,13 @@ function App() {
             <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'toggleHelpModal' })}>
               Help
             </button>
-            <button className="ui-button terracotta" onClick={() => runDemoScenario(false)}>
-              Run Demo Scenario
+            <button
+              type="button"
+              className="ui-button terracotta"
+              onClick={() => runDemoScenario(false)}
+              title="Optional 500-profile demo. Clears your current local shortlist and inquiries."
+            >
+              Load Sample Demo
             </button>
             <button className="ui-button secondary" onClick={handleResetDemoData}>
               Reset Demo Data
@@ -1022,10 +1027,10 @@ function App() {
                 Use role/availability/rate chips and search to narrow candidates, then shortlist talent and move them through the hire-status pipeline: New, Contacted, Interview, Hired.
               </p>
               <p>
-                Large pool mode (500, 2000, 5000) is optimized through pagination and optional list view so the app can mimic high-volume scenarios without a backend.
+                Use Load 500/2000/5000 for larger samples. List Mode uses a virtualized table, so only the visible rows are rendered.
               </p>
               <p>
-                All shortlist and seed data persist in localStorage. You can export/import JSON for demo portability.
+                Load Sample Demo is optional. It loads 500 repeatable fictional profiles, switches to Mock API and resets filters and view settings. It also clears your local shortlist and inquiries. You can export JSON before loading it if you want to keep that work.
               </p>
             </div>
             <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'toggleHelpModal' })}>

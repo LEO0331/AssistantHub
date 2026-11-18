@@ -51,13 +51,31 @@ describe('App integration', () => {
   test('runs one-click demo scenario preset', async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByText('Run Demo Scenario'));
+    fireEvent.click(screen.getByText('Load Sample Demo'));
 
     await waitFor(() => {
       expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
       expect(screen.getByLabelText('Deterministic seed')).toHaveValue(424242);
       expect(screen.getByLabelText('Data source')).toHaveValue('mock-api');
-      expect(screen.getByText(/Demo scenario loaded/i)).toBeInTheDocument();
+      expect(screen.getByText(/Sample demo loaded/i)).toBeInTheDocument();
+    });
+  });
+
+  test('sample demo is optional and warns that it clears local demo records', async () => {
+    render(<App />);
+    const button = screen.getByRole('button', { name: 'Load Sample Demo' });
+    expect(button).toHaveAttribute('title', expect.stringMatching(/clears your current local shortlist and inquiries/i));
+    expect(screen.getByText(/Talent Pool Size \(6 generated\)/)).toBeInTheDocument();
+
+    await waitFor(() => expect(screen.getAllByText('Shortlist').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('Shortlist')[0]);
+    expect(JSON.parse(localStorage.getItem('talentShortlist'))).toHaveLength(1);
+
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(screen.getByText(/Sample demo loaded: 500 fictional profiles/i)).toBeInTheDocument();
+      expect(JSON.parse(localStorage.getItem('talentShortlist'))).toHaveLength(0);
+      expect(screen.getByLabelText('Data source')).toHaveValue('mock-api');
     });
   });
 
@@ -69,7 +87,7 @@ describe('App integration', () => {
       expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
       expect(screen.getByLabelText('Deterministic seed')).toHaveValue(424242);
       expect(screen.getByLabelText('Data source')).toHaveValue('mock-api');
-      expect(screen.getByText('Demo scenario loaded from URL preset.')).toBeInTheDocument();
+      expect(screen.getByText('Sample demo loaded from URL preset.')).toBeInTheDocument();
     });
 
     window.history.pushState({}, '', '/');
@@ -79,7 +97,7 @@ describe('App integration', () => {
     render(<App />);
     expect(screen.queryByText('Demo Checklist')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Presenter checklist' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText('Run Demo Scenario'));
+    fireEvent.click(screen.getByText('Load Sample Demo'));
     await waitFor(() => {
       expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
     });
