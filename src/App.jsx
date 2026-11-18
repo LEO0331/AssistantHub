@@ -550,60 +550,45 @@ function App() {
 
       <main className="content-shell">
         <section className="controls-panel" aria-label="Talent pool controls">
-          <label htmlFor="numCards" className="panel-label">
-            Talent Pool Size ({numberOfCards} generated)
-          </label>
-          <div className="controls-grid">
-            <input
-              className="input-control"
-              type="number"
-              id="numCards"
-              value={numberOfCards}
-              onChange={handleInputChange}
-              min="0"
-              max={MAX_CARDS}
-            />
-
-            <div className="button-row">
-              <button className="ui-button secondary" onClick={handleAddCard} aria-label="Add card">
-                +
-              </button>
-              <button className="ui-button secondary" onClick={handleMinusCard} aria-label="Remove card">
-                -
-              </button>
+          <div className="pool-setup-grid" role="group" aria-label="Pool setup">
+            <div className="control-field pool-size-control">
+              <label htmlFor="numCards" className="panel-label">
+                Talent Pool Size ({numberOfCards} generated)
+              </label>
+              <div className="pool-size-input-row">
+                <input
+                  className="input-control"
+                  type="number"
+                  id="numCards"
+                  value={numberOfCards}
+                  onChange={handleInputChange}
+                  min="0"
+                  max={MAX_CARDS}
+                />
+                <div className="pool-stepper" role="group" aria-label="Adjust pool size">
+                  <button type="button" className="ui-button secondary" onClick={handleAddCard} aria-label="Add card">
+                    +
+                  </button>
+                  <button type="button" className="ui-button secondary" onClick={handleMinusCard} aria-label="Remove card">
+                    -
+                  </button>
+                </div>
+              </div>
+              <div className="pool-presets" role="group" aria-label="Quick pool sizes">
+                <button type="button" className="ui-button dark" onClick={() => { setNumberOfCards(500); setCurrentPage(1); }}>
+                  Load 500
+                </button>
+                <button type="button" className="ui-button dark" onClick={() => { setNumberOfCards(2000); setCurrentPage(1); }}>
+                  Load 2000
+                </button>
+                <button type="button" className="ui-button dark" onClick={() => { setNumberOfCards(5000); setCurrentPage(1); }}>
+                  Load 5000
+                </button>
+              </div>
             </div>
 
-            <button className="ui-button dark" onClick={() => { setNumberOfCards(500); setCurrentPage(1); }}>
-              Load 500
-            </button>
-            <button className="ui-button dark" onClick={() => { setNumberOfCards(2000); setCurrentPage(1); }}>
-              Load 2000
-            </button>
-            <button className="ui-button dark" onClick={() => { setNumberOfCards(5000); setCurrentPage(1); }}>
-              Load 5000
-            </button>
-
-            <SearchBar
-              value={uiState.searchTerm}
-              onChange={(event) => dispatchUi({ type: 'setSearch', payload: event.target.value })}
-              onClear={() => dispatchUi({ type: 'setSearch', payload: '' })}
-              isSearching={uiState.searchTerm.trim().toLowerCase() !== debouncedSearchTerm}
-            />
-
-            <select
-              className="select-control"
-              value={uiState.sortOrder}
-              onChange={(event) => dispatchUi({ type: 'setSort', payload: event.target.value })}
-              aria-label="Sort by likes"
-            >
-              <option value={SORT_OPTIONS.HIGH_TO_LOW}>Likes: High to Low</option>
-              <option value={SORT_OPTIONS.LOW_TO_HIGH}>Likes: Low to High</option>
-            </select>
-
-            <div className="seed-control">
-              <label htmlFor="seedInput" className="panel-label">
-                Seed
-              </label>
+            <div className="control-field">
+              <label htmlFor="seedInput" className="panel-label">Seed</label>
               <input
                 id="seedInput"
                 type="number"
@@ -611,19 +596,20 @@ function App() {
                 value={seed}
                 onChange={handleSeedChange}
                 aria-label="Deterministic seed"
+                aria-describedby="seedHint"
               />
+              <p className="field-hint" id="seedHint">Same seed generates the same profiles.</p>
             </div>
 
-            <div className="seed-control">
-              <label htmlFor="sourceSelect" className="panel-label">
-                Data source
-              </label>
+            <div className="control-field">
+              <label htmlFor="sourceSelect" className="panel-label">Data source</label>
               <select
                 id="sourceSelect"
                 className="select-control"
                 value={talentSource}
                 onChange={(event) => setTalentSource(event.target.value)}
                 aria-label="Data source"
+                aria-describedby="sourceHint"
               >
                 <option value={TALENT_SOURCES.LOCAL}>Local generator</option>
                 <option value={TALENT_SOURCES.MOCK_API}>Mock API adapter</option>
@@ -631,8 +617,36 @@ function App() {
                   {readCandidateApiBaseUrl() ? 'Real MySQL API (authenticated workflow)' : 'Real API (not configured)'}
                 </option>
               </select>
+              <p className="field-hint" id="sourceHint">Choose local or simulated data.</p>
             </div>
+          </div>
 
+          <div className="talent-discovery-grid" role="group" aria-label="Find talent">
+            <div className="control-field">
+              <label htmlFor="talentSearch" className="panel-label">Search talents</label>
+              <SearchBar
+                value={uiState.searchTerm}
+                onChange={(event) => dispatchUi({ type: 'setSearch', payload: event.target.value })}
+                onClear={() => dispatchUi({ type: 'setSearch', payload: '' })}
+                isSearching={uiState.searchTerm.trim().toLowerCase() !== debouncedSearchTerm}
+              />
+            </div>
+            <div className="control-field">
+              <label htmlFor="sortOrder" className="panel-label">Sort by likes</label>
+              <select
+                id="sortOrder"
+                className="select-control"
+                value={uiState.sortOrder}
+                onChange={(event) => dispatchUi({ type: 'setSort', payload: event.target.value })}
+                aria-label="Sort by likes"
+              >
+                <option value={SORT_OPTIONS.HIGH_TO_LOW}>Likes: High to Low</option>
+                <option value={SORT_OPTIONS.LOW_TO_HIGH}>Likes: Low to High</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="controls-grid">
             <button className="ui-button dark" onClick={() => dispatchUi({ type: 'toggleInquiryModal' })}>
               View Hiring Inquiries
             </button>

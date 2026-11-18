@@ -9,6 +9,7 @@ const SearchBar = ({ value, onChange, onClear, isSearching = false }) => {
       </span>
       <input
         className="input-control search-input"
+        id="talentSearch"
         type="text"
         placeholder="Search by name, role, or skill..."
         value={value}
