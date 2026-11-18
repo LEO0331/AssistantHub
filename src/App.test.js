@@ -22,8 +22,8 @@ jest.mock('react-leaflet', () => ({
   Popup: ({ children }) => <div>Popup {children}</div>,
 }));
 jest.mock('react-csv', () => ({
-  CSVLink: ({ children, ...props }) => (
-    <a href="#csv" {...props}>
+  CSVLink: ({ children, data, ...props }) => (
+    <a href="#csv" data-export-rows={JSON.stringify(data)} {...props}>
       {children}
     </a>
   ),
@@ -397,6 +397,48 @@ describe('App integration', () => {
     await waitFor(() => {
       expect(screen.getByText(/Import failed: File exceeds/i)).toBeInTheDocument();
     });
+  });
+
+  test('CSV export neutralizes formulas from JSON import without changing on-screen/localStorage values', async () => {
+    render(<App />);
+    const input = document.querySelector('input[accept="application/json"]');
+    const importPayload = {
+      seed: 11,
+      shortlist: [{
+        id: 'csv-1', name: '=HYPERLINK("https://example.invalid","open")',
+        role: '  +Role', email: '@a.example', phone: '\t=123',
+        country: 'US', hourlyRateUsd: 50, hireStatus: 'Interview',
+      }],
+      inquiries: [],
+    };
+    fireEvent.change(input, {
+      target: { files: [new File([JSON.stringify(importPayload)], 'demo.json', {
+        type: 'application/json',
+      })] },
+    });
+    await waitFor(() => expect(screen.getByText('Demo data imported.')).toBeInTheDocument());
+    const original = JSON.parse(localStorage.getItem('talentShortlist'));
+    expect(original[0].name).toBe(importPayload.shortlist[0].name);
+    const exported = JSON.parse(screen.getByText('Export Shortlist CSV').getAttribute('data-export-rows'));
+    expect(exported).toHaveLength(1);
+    expect(exported[0].name).toBe("'" + importPayload.shortlist[0].name);
+    expect(exported[0].role).toBe("'" + importPayload.shortlist[0].role);
+    expect(exported[0].email).toBe("'" + importPayload.shortlist[0].email);
+    expect(exported[0].phone).toBe("'" + importPayload.shortlist[0].phone);
+    expect(JSON.parse(localStorage.getItem('talentShortlist'))[0].name).toBe(importPayload.shortlist[0].name);
+  });
+
+  test('oversized import array is rejected with no partial shortlist replacement', async () => {
+    render(<App />);
+    const input = document.querySelector('input[accept="application/json"]');
+    const importPayload = { shortlist: Array(5001).fill({}), inquiries: [] };
+    fireEvent.change(input, {
+      target: { files: [new File([JSON.stringify(importPayload)], 'large-count.json', {
+        type: 'application/json',
+      })] },
+    });
+    await waitFor(() => expect(screen.getByText(/Import failed: shortlist exceeds 5000 entries/)).toBeInTheDocument());
+    expect(JSON.parse(localStorage.getItem('talentShortlist') || '[]')).toHaveLength(0);
   });
 
   test('exports json demo payload', async () => {

@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { CSVLink } from 'react-csv';
+import { safeShortlistCsvRows } from './utils/csvExport';
 import ProfileCards from './ProfileCards';
 import SearchBar from './SearchBar';
 import config from './ChatbotConfig';
@@ -25,6 +26,8 @@ const TALENT_SEED_KEY = 'talentSeed';
 const TALENT_SOURCE_KEY = 'talentSource';
 export const HIRE_STATUSES = ['New', 'Contacted', 'Interview', 'Hired'];
 export const DEFAULT_IMPORT_MAX_BYTES = 1024 * 1024 * 2;
+export const MAX_IMPORT_SHORTLIST = 5000;
+export const MAX_IMPORT_INQUIRIES = 1000;
 const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
 // Virtual rows have a fixed height so scroll offsets match the rendered table.
 const TABLE_ROW_HEIGHT = 72;
@@ -111,6 +114,13 @@ export const validateImportedDemoData = (parsed) => {
   if (parsed.inquiries !== undefined && !Array.isArray(parsed.inquiries)) {
     return { ok: false, error: 'inquiries must be an array.' };
   }
+  // Reject before mapping to avoid unbounded allocations/rendering and storage.
+  if ((parsed.shortlist?.length || 0) > MAX_IMPORT_SHORTLIST) {
+    return { ok: false, error: 'shortlist exceeds ' + MAX_IMPORT_SHORTLIST + ' entries.' };
+  }
+  if ((parsed.inquiries?.length || 0) > MAX_IMPORT_INQUIRIES) {
+    return { ok: false, error: 'inquiries exceeds ' + MAX_IMPORT_INQUIRIES + ' entries.' };
+  }
 
   const shortlist = (parsed.shortlist || []).map((item, index) => {
     if (!item || typeof item !== 'object') {
@@ -153,7 +163,7 @@ export const validateImportedDemoData = (parsed) => {
   });
 
   const nextSeed = Number(parsed.seed);
-  const seed = Number.isFinite(nextSeed) ? Math.trunc(nextSeed) : BASE_SEED;
+  const seed = Number.isSafeInteger(nextSeed) ? nextSeed : BASE_SEED;
 
   return {
     ok: true,
@@ -394,6 +404,11 @@ function App() {
     }
   }, [currentPage, totalPages]);
 
+  const csvRows = useMemo(
+    () => safeShortlistCsvRows(shortlistedTalent),
+    [shortlistedTalent]
+  );
+
   const handleExportJson = () => {
     const payload = {
       version: 1,
@@ -427,6 +442,10 @@ function App() {
       }
 
       const text = await readJsonFile(file);
+      if (new Blob([text]).size > DEFAULT_IMPORT_MAX_BYTES) {
+        setJsonStatus('Import failed: File exceeds 2.0MB limit.');
+        return;
+      }
       const parsed = JSON.parse(text);
       const validated = validateImportedDemoData(parsed);
       if (!validated.ok) {
@@ -622,7 +641,7 @@ function App() {
             </button>
 
             <CSVLink
-              data={shortlistedTalent}
+              data={csvRows}
               filename="shortlisted_talent.csv"
               className="ui-button terracotta csv-link"
             >

@@ -23,6 +23,8 @@ jest.mock('react-csv', () => ({
 
 import {
   DEFAULT_IMPORT_MAX_BYTES,
+  MAX_IMPORT_SHORTLIST,
+  MAX_IMPORT_INQUIRIES,
   getNextStatus,
   HIRE_STATUSES,
   isRateMatch,
@@ -155,6 +157,34 @@ describe('App logic helpers', () => {
     const badInquiries = validateImportedDemoData({ shortlist: [], inquiries: 'nope' });
     expect(badInquiries.ok).toBe(false);
     expect(badInquiries.error).toMatch(/inquiries must be an array/i);
+  });
+
+  test('rejects excessive import arrays before mapping their contents', () => {
+    const tooManyShortlist = validateImportedDemoData({
+      shortlist: Array(MAX_IMPORT_SHORTLIST + 1).fill({}),
+      inquiries: [],
+    });
+    expect(tooManyShortlist).toEqual({
+      ok: false, error: 'shortlist exceeds ' + MAX_IMPORT_SHORTLIST + ' entries.',
+    });
+
+    const tooManyInquiries = validateImportedDemoData({
+      shortlist: [],
+      inquiries: Array(MAX_IMPORT_INQUIRIES + 1).fill({}),
+    });
+    expect(tooManyInquiries).toEqual({
+      ok: false, error: 'inquiries exceeds ' + MAX_IMPORT_INQUIRIES + ' entries.',
+    });
+
+    const boundary = validateImportedDemoData({
+      seed: 777,
+      shortlist: [],
+      inquiries: Array(MAX_IMPORT_INQUIRIES).fill({
+        name: 'Demo', email: 'demo@example.test', phone: '', message: 'hi',
+      }),
+    });
+    expect(boundary.ok).toBe(true);
+    expect(boundary.value.inquiries).toHaveLength(MAX_IMPORT_INQUIRIES);
   });
 
   test('validateImportedDemoData throws for bad shortlist/inquiry items', () => {
