@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import { fetchCandidatePage, readCandidateApiBaseUrl } from './candidateApi';
+import { fetchCandidatePage, loginCandidateApi, readCandidateApiBaseUrl } from './candidateApi';
 
 const candidate = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -39,7 +39,8 @@ describe('candidate API adapter', () => {
     });
     const result = await fetchCandidatePage({
       baseUrl: 'https://api.example.com', page: 2, pageSize: 12,
-      q: 'project&role', role: 'Project Coordinator', signal: controller.signal, fetchImpl
+      q: 'project&role', role: 'Project Coordinator', signal: controller.signal,
+      accessToken: 'test_token_long_enough_for_adapter', fetchImpl
     });
     expect(result.total).toBe(13);
     const [url, options] = fetchImpl.mock.calls[0];
@@ -47,6 +48,7 @@ describe('candidate API adapter', () => {
     expect(new URL(url).searchParams.get('page')).toBe('2');
     expect(options.signal).toBe(controller.signal);
     expect(options.credentials).toBe('omit');
+    expect(options.headers.Authorization).toBe('Bearer test_token_long_enough_for_adapter');
     expect(options.redirect).toBe('error');
   });
 
@@ -54,7 +56,7 @@ describe('candidate API adapter', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true, json: async () => ({ items: [{ ...candidate, skills: 'bad' }], page: 1, pageSize: 12, total: 1 })
     });
-    await expect(fetchCandidatePage({ baseUrl: 'https://api.example.com', fetchImpl }))
+    await expect(fetchCandidatePage({ baseUrl: 'https://api.example.com', accessToken: 'test_token_long_enough_for_adapter', fetchImpl }))
       .rejects.toThrow(/invalid response/);
     fetchImpl.mockRejectedValueOnce(new Error('password=secret'));
     await expect(fetchCandidatePage({ baseUrl: 'https://api.example.com', fetchImpl }))
@@ -62,6 +64,47 @@ describe('candidate API adapter', () => {
     fetchImpl.mockRejectedValueOnce(Object.assign(new Error('cancelled'), { name: 'AbortError' }));
     await expect(fetchCandidatePage({ baseUrl: 'https://api.example.com', fetchImpl }))
       .rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+
+  test('an unauthorized API response signals session expiration instead of falling back to mock data', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({ ok: false, status: 401 });
+    await expect(fetchCandidatePage({
+      baseUrl: 'https://api.example.com', accessToken: 'test_token_long_enough_for_adapter', fetchImpl
+    })).rejects.toMatchObject({ status: 401 });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  test('login sends credentials only to configured auth endpoint and validates token response', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true, status: 200,
+      json: async () => ({
+        accessToken: 'signed_fake_test_only_token',
+        tokenType: 'Bearer',
+        expiresIn: 900,
+        user: { id: 'user-id', email: 'demo@test.example', role: 'viewer' }
+      })
+    });
+    const data = await loginCandidateApi({
+      baseUrl: 'https://api.example.com', email: 'demo@test.example', password: 'Test-Password-Only',
+      fetchImpl
+    });
+    expect(data.expiresIn).toBe(900);
+    const [url, options] = fetchImpl.mock.calls[0];
+    expect(url).toBe('https://api.example.com/api/auth/login');
+    expect(JSON.parse(options.body)).toEqual({
+      email: 'demo@test.example', password: 'Test-Password-Only'
+    });
+    expect(options.credentials).toBe('omit');
+    expect(options.cache).toBe('no-store');
+    expect(options.headers.Authorization).toBeUndefined();
+    fetchImpl.mockResolvedValueOnce({ ok: true, status: 200,
+      json: async () => ({ accessToken: 'invalid', tokenType: 'Bearer', expiresIn: 900, user: { role: 'admin' } })
+    });
+    await expect(loginCandidateApi({
+      baseUrl: 'https://api.example.com', email: 'demo@test.example',
+      password: 'Test-Password-Only', fetchImpl
+    })).rejects.toThrow(/invalid response/);
   });
 
   test('never silently substitutes generated candidates in API mode', async () => {

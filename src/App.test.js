@@ -380,23 +380,34 @@ describe('App integration', () => {
     meta.setAttribute('content', 'http://127.0.0.1:3100');
     document.head.appendChild(meta);
     const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = jest.fn().mockImplementation(url => Promise.resolve({
       ok: true,
-      json: async () => ({
-        items: [{
-          id: '00000000-0000-4000-8000-000000000001',
-          name: 'Demo Candidate 01',
-          role: 'Project Coordinator',
-          availability: 'Available now',
-          skills: ['Scheduling'],
-          hourlyRateUsd: 40
-        }],
-        page: 1, pageSize: 12, total: 1
-      })
-    });
+      status: 200,
+      json: async () => url.includes('/api/auth/login') ?
+        {
+          accessToken: 'test_api_token_from_login',
+          tokenType: 'Bearer',
+          expiresIn: 900,
+          user: { id: 'viewer1', email: 'viewer@example.test', role: 'viewer' }
+        } : {
+          items: [{
+            id: '00000000-0000-4000-8000-000000000001',
+            name: 'Demo Candidate 01',
+            role: 'Project Coordinator',
+            availability: 'Available now',
+            skills: ['Scheduling'],
+            hourlyRateUsd: 40
+          }],
+          page: 1, pageSize: 12, total: 1
+        }
+    }));
     try {
       render(<App />);
       fireEvent.change(screen.getByLabelText('Data source'), { target: { value: 'api' } });
+      expect(screen.getByText('Sign in to API')).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('API email'), { target: { value: 'viewer@example.test' } });
+      fireEvent.change(screen.getByLabelText('API password'), { target: { value: 'test-password' } });
+      fireEvent.click(screen.getByText('Sign in to API'));
       await waitFor(() => expect(screen.getByText('Demo Candidate 01')).toBeInTheDocument());
       expect(screen.getByText(/read-only synthetic records/i)).toBeInTheDocument();
       fireEvent.click(screen.getByText('Return to local demo'));
