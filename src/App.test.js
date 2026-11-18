@@ -48,6 +48,64 @@ describe('App integration', () => {
     });
   });
 
+  test('groups talent setup fields and keeps seed, source, search and sort aligned by labeled field', async () => {
+    render(<App />);
+
+    const setup = screen.getByRole('group', { name: 'Pool setup' });
+    const count = within(setup).getByRole('spinbutton', { name: /Talent Pool Size/i });
+    const seed = within(setup).getByRole('spinbutton', { name: 'Deterministic seed' });
+    const source = within(setup).getByRole('combobox', { name: 'Data source' });
+    const presets = within(setup).getByRole('group', { name: 'Quick pool sizes' });
+    const stepper = within(setup).getByRole('group', { name: 'Adjust pool size' });
+
+    expect(count).toHaveValue(6);
+    expect(seed).toHaveValue(7331);
+    expect(source).toHaveValue('local');
+    expect(within(stepper).getByRole('button', { name: 'Add card' })).toBeInTheDocument();
+    expect(within(stepper).getByRole('button', { name: 'Remove card' })).toBeInTheDocument();
+    expect(within(presets).getAllByRole('button').map(button => button.textContent)).toEqual([
+      'Load 500', 'Load 2000', 'Load 5000',
+    ]);
+
+    for (const input of [count, seed, source]) {
+      const field = input.closest('.control-field');
+      expect(field).not.toBeNull();
+      expect(field.querySelector('label')).toBeInTheDocument();
+      expect(field.contains(input)).toBe(true);
+    }
+    expect(seed).toHaveAttribute('aria-describedby', 'seedHint');
+    expect(source).toHaveAttribute('aria-describedby', 'sourceHint');
+
+    const discover = screen.getByRole('group', { name: 'Find talent' });
+    const search = within(discover).getByRole('textbox', { name: 'Search assistants by name' });
+    const sort = within(discover).getByRole('combobox', { name: 'Sort by likes' });
+    expect(search).toHaveAttribute('id', 'talentSearch');
+    expect(sort).toHaveAttribute('id', 'sortOrder');
+    expect(within(discover).getByText('Search talents')).toHaveAttribute('for', 'talentSearch');
+    expect(within(discover).getByText('Sort by likes')).toHaveAttribute('for', 'sortOrder');
+    expect(search.closest('.control-field')).not.toBe(sort.closest('.control-field'));
+    expect(within(discover).getAllByRole('combobox')).toHaveLength(1);
+
+    fireEvent.click(within(stepper).getByRole('button', { name: 'Add card' }));
+    expect(count).toHaveValue(7);
+    fireEvent.change(seed, { target: { value: '9001' } });
+    expect(seed).toHaveValue(9001);
+    fireEvent.change(sort, { target: { value: 'lowToHigh' } });
+    expect(sort).toHaveValue('lowToHigh');
+  });
+
+  test('pool presets remain grouped and selecting one changes the generated talent count', async () => {
+    render(<App />);
+    const presets = within(screen.getByRole('group', { name: 'Pool setup' }))
+      .getByRole('group', { name: 'Quick pool sizes' });
+    fireEvent.click(within(presets).getByRole('button', { name: 'Load 500' }));
+    await waitFor(() => {
+      expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText('Deterministic seed')).toHaveValue(7331);
+    expect(screen.getByLabelText('Data source')).toHaveValue('local');
+  });
+
   test('runs one-click demo scenario preset', async () => {
     render(<App />);
 
