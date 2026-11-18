@@ -1,6 +1,6 @@
 # AssistantHub 2.0 — proposed architecture
 
-> PR #1 proposed the architecture. PR #2 adds an isolated Express/MySQL foundation. PR #3 adds read-only synthetic candidate list/detail endpoints and an optional, separately configured server-paginated React browser. PR #4 adds scrypt password verification, short-lived JWTs, current-database-role RBAC, operator-only provisioning, and in-memory frontend authentication. Default GitHub Pages remains an offline demo; the backend is not deployed. Authentication and candidate RBAC were implemented in PR #4; PR #5 implements transactional hiring status changes and audit-read APIs on MySQL. The frontend hiring workflow and audit timeline are still planned for PR #6.
+> PR #1 proposed the architecture. PR #2 adds an isolated Express/MySQL foundation. PR #3 adds read-only synthetic candidate list/detail endpoints and an optional, separately configured server-paginated React browser. PR #4 adds scrypt password verification, short-lived JWTs, current-database-role RBAC, operator-only provisioning, and in-memory frontend authentication. Default GitHub Pages remains an offline demo; the backend is not deployed. Authentication and candidate RBAC were implemented in PR #4; PR #5 implements transactional hiring status changes and audit-read APIs on MySQL. PR #6 connects authenticated server-authoritative hiring controls, version-conflict recovery and paginated audit history to the React API browser. The backend is still not publicly deployed.
 
 ## 1. Purpose and boundaries
 
@@ -103,7 +103,7 @@ Two recruiters read application version 7 at Interview. Recruiter A requests Hir
 3. PR #3: add an **explicit** API source and separate read-only candidate browser (no fake contact fields), server pagination/filtering, response validation, AbortController cancellation, loading/error/retry states; keep local/mock modes unchanged.
 4. PR #4: add authenticated API sessions and server-side authorization; do not rely on hidden UI controls.
 5. PR #5: implement transactional state transitions and audit read API (completed in local backend, real-MySQL tests).
-6. PR #6: integrate workflow controls and audit timeline into React; remove duplicate business authority from browser for API mode.
+6. PR #6: integrate workflow controls and audit timeline into React; no duplicate browser business authority in API mode (implemented in local full-stack MVP).
 7. PR #7: implement persistent idempotency handling, structured logs, request IDs and failure-mode testing.
 8. PR #8: tighten security gates, public isolated demo, deployment operations and interview guide.
 

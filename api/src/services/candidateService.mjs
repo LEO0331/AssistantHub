@@ -24,7 +24,7 @@ const SORT_ORDERS = {
 };
 
 export function createCandidateService(db) {
-  const { Candidate } = defineModels(db);
+  const { Candidate, Application } = defineModels(db);
   return {
     async list(query) {
       const conditions = {};
@@ -52,6 +52,20 @@ export function createCandidateService(db) {
         page: query.page,
         pageSize: query.pageSize,
         total: count
+      };
+    },
+    async applicationForCandidate(id) {
+      const application = await Application.findOne({
+        where: { candidate_id: id },
+        attributes: ['id', 'candidate_id', 'status', 'version', 'updated_at']
+      });
+      if (!application) return null;
+      return {
+        id: application.id,
+        candidateId: application.candidate_id,
+        status: application.status,
+        version: application.version,
+        updatedAt: new Date(application.updated_at).toISOString()
       };
     },
     async detail(id) {

@@ -107,3 +107,20 @@ test('CORS accepts only configured frontend origin and exposes no credentials', 
   });
   assert.equal(allowed.status, 204);
 });
+
+
+test('candidate-to-application lookup returns the actual database application ID, not a derived ID', async t => {
+  const { get, base } = await serve(t);
+  const res = await get('/api/candidates/00000000-0000-4000-8000-000000000001/application');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.candidateId, '00000000-0000-4000-8000-000000000001');
+  assert.equal(res.body.id, '00000000-0000-4000-8000-000000000101');
+  assert.equal(res.body.status, 'New');
+  assert.equal(res.body.version, 1);
+  assert.ok(res.body.updatedAt.endsWith('Z'));
+  assert.deepEqual(Object.keys(res.body).sort(), ['candidateId', 'id', 'status', 'updatedAt', 'version']);
+  assert.equal((await get('/api/candidates/not-an-id/application')).status, 400);
+  assert.equal((await get('/api/candidates/00000000-0000-4000-8000-000000000999/application')).status, 404);
+  const unauth = await fetch(base + '/api/candidates/00000000-0000-4000-8000-000000000001/application');
+  assert.equal(unauth.status, 401);
+});

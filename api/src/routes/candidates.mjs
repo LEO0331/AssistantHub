@@ -31,6 +31,16 @@ export function createCandidateRouter({ db }) {
     const query = parseCandidateQuery(req.query);
     return res.status(200).json(await getService().list(query));
   }));
+  // Candidate ID → application ID lookup. Never infer IDs from synthetic seeds.
+  // This route inherits JWT authentication and the current database role check.
+  router.get('/:id/application', requestHandler(async (req, res) => {
+    const id = parseCandidateId(req.params.id);
+    const application = await getService().applicationForCandidate(id);
+    if (!application) return res.status(404).json({
+      error: { code: 'NOT_FOUND', message: 'Candidate application not found' }
+    });
+    return res.status(200).json(application);
+  }));
   router.get('/:id', requestHandler(async (req, res) => {
     const id = parseCandidateId(req.params.id);
     const candidate = await getService().detail(id);

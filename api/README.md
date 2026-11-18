@@ -6,13 +6,14 @@ This is an **isolated, not-yet-deployed backend**. React and GitHub Pages contin
 - GET /api/health/ready: 200 when MySQL responds, otherwise 503 { "status": "unavailable" }.
 - GET /api/candidates: synthetic candidate list with server query `q` (name/role/skills), `role`, `availability`, `rate` (all/under40/40to60/over60), `sort` (nameAsc/rateAsc/rateDesc), `page` (1–1000), `pageSize` (1–96); returns { items, page, pageSize, total }.
 - GET /api/candidates/:id: minimal synthetic candidate detail by UUID; 400 for malformed IDs, 404 for missing records.
+- GET /api/candidates/:id/application: JWT-protected candidate-to-application lookup, returning { id, candidateId, status, version, updatedAt }; no fabricated ID assumptions.
 
 Candidate discovery is **protected by Bearer JWT with server-validated RBAC** and returns synthetic-only fields. POST /api/auth/login exchanges operator-provisioned credentials for a 15-minute access token; GET /api/auth/me returns the authenticated identity; GET /api/admin/users/summary is admin-only and returns aggregate counts. The backend additionally implements:
 - `GET /api/applications/:id` — authenticated Viewer/Recruiter/Admin application status and version.
 - `POST /api/applications/:id/transitions` — Recruiter/Admin only; compare-and-swap status/version and audit event in one InnoDB transaction. Terminal Hired/Rejected may not change in this MVP.
 - `GET /api/applications/:id/audit-events` — authenticated paginated audit history, stable ordering, server-owned actor/timestamp/request ID.
 
-The optional React API mode **does not yet render workflow controls or audit history**; that is PR #6. See [PR #5 workflow design](../docs/workflow-audit-pr5.md). Do not expose this unfinished service publicly or use real candidate data.
+The optional React API mode **now renders authenticated workflow controls and server-sourced audit history** in PR #6, without changing local/mock modes. Candidate-to-application discovery is available through `GET /api/candidates/:id/application` and returns the real application status/version/ID. See [PR #5 workflow design](../docs/workflow-audit-pr5.md). Do not expose this unfinished service publicly or use real candidate data.
 
 ## Local setup (Node 20.19+ / 22.12+, Docker)
 
@@ -35,7 +36,7 @@ Example Unix/macOS shell for the commands in steps 4–6:
     npm run db:seed --prefix api
     npm start --prefix api
 
-Set `API_CORS_ORIGIN=http://127.0.0.1:3000` for the local frontend origin; other browser origins get no CORS access. Also set `AUTH_JWT_SECRET` to a unique, random 32+ byte value (never commit or expose it). Run `npm run user:provision --prefix api` with `BOOTSTRAP_USER_EMAIL`, `BOOTSTRAP_USER_ROLE` and `BOOTSTRAP_USER_PASSWORD` in your *private* environment to provision a user; no default login is seeded. See [security-auth-pr4.md](../docs/security-auth-pr4.md) for the full safe workflow. Run Vite with `VITE_ASSISTANTHUB_API_BASE_URL=http://127.0.0.1:3100` to enable the optional read-only browser; do not put passwords or tokens in Vite variables. Use only the synthetic seed; no actual candidate PII is returned.
+Set `API_CORS_ORIGIN=http://127.0.0.1:3000` for the local frontend origin; other browser origins get no CORS access. Also set `AUTH_JWT_SECRET` to a unique, random 32+ byte value (never commit or expose it). Run `npm run user:provision --prefix api` with `BOOTSTRAP_USER_EMAIL`, `BOOTSTRAP_USER_ROLE` and `BOOTSTRAP_USER_PASSWORD` in your *private* environment to provision a user; no default login is seeded. See [security-auth-pr4.md](../docs/security-auth-pr4.md) for the full safe workflow. Run Vite with `VITE_ASSISTANTHUB_API_BASE_URL=http://127.0.0.1:3100` to enable the optional read-only browser; do not put passwords or tokens in Vite variables. Use only the synthetic seed; no actual candidate PII is returned. Follow [PR #6 hiring UI and failure recovery](../docs/hiring-ui-pr6.md): Viewer read-only, Recruiter/Admin writes, 409/unknown outcome requires refresh before any retry.
 
 To run database-backed tests locally (use only a disposable database), set NODE_ENV=test and run npm test --prefix api. The GitHub Actions api-ci.yml job provisions isolated MySQL and runs migration twice, seed twice, 4 health tests and a DB integration test, plus a **blocking production-only high-severity npm audit** and a separately labeled report of all dependency findings. `umzug` currently retains a **dev-tooling** transitive `picomatch` finding (GHSA-fc5q-39xc-vjpf) without a verified patched upstream version; Sequelize's `uuid` transitive advisory is also tracked. Neither is claimed as resolved.
 
@@ -50,4 +51,4 @@ To run database-backed tests locally (use only a disposable database), set NODE_
 - API database credentials are required through environment variables; no default production password. Docker Compose passwords are clearly local-only and must not be reused outside a developer machine.
 - A green /ready response tests connectivity, not that all schema migrations were applied. Run migrations as a separate deployment step.
 
-The design proposal remains in ../docs/architecture-v2.md and ../docs/api-contract.md. Candidate discovery was added in PR #3, JWT login/RBAC in PR #4, and transactional workflow/audit APIs in PR #5. Add secure hiring UI integration in PR #6 and persistent idempotency in PR #7.
+The design proposal remains in ../docs/architecture-v2.md and ../docs/api-contract.md. Candidate discovery was added in PR #3, JWT login/RBAC in PR #4, and transactional workflow/audit APIs in PR #5. PR #6 connects the secure hiring UI; persistent idempotency and retry replay remain for PR #7.
