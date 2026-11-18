@@ -3,3 +3,6 @@ coverage
 build
 .DS_Store
 .omx
+.env
+.env.*
+!.env.example

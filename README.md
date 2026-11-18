@@ -6,6 +6,19 @@
 
 AssistantHub is a lightweight React talent-pool demo portal for discovering assistants, shortlisting talent, and progressing hire requests through a local pipeline.
 
+## AssistantHub 2.0 roadmap (design only)
+
+An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The proposed system adds a separately hosted Express API, Sequelize/MySQL persistence, JWT authentication, server-side RBAC, version-based optimistic concurrency, and a transactional audit trail. **None of those backend features are implemented yet**; this site remains a client-only demo.
+
+- [Architecture and phased rollout](docs/architecture-v2.md)
+- [Draft REST API contract and test scenarios](docs/api-contract.md)
+- PR #1: documentation and nonfunctional configuration cleanup only.
+- PRs #2–#5: API/database foundation, real candidate queries, authentication/authorization, transactional workflow and audit.
+- PR #6: integrate the real API workflow into React; first functional MVP.
+- PRs #7–#8: idempotency/failure handling and isolated public demo hardening.
+
+Existing `local` and `mock-api` data sources remain browser simulations (the latter is a timer, **not** an HTTP API). The GitHub Pages base path `/AssistantHub/`, output directory `build/`, CI and deployment behavior are unchanged by PR #1. Do not use synthetic profile/contact data as real hiring information.
+
 ## Highlights
 - Deterministic talent generation via `@faker-js/faker` (seed-controlled).
 - Data-source adapter switch (`local` / `mock-api`) for backend migration readiness.
