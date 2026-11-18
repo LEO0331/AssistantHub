@@ -1,5 +1,6 @@
 import express from 'express';
 import { createCandidateRouter } from './routes/candidates.mjs';
+import { createApplicationRouter } from './routes/applications.mjs';
 import { createAuthRouter } from './routes/auth.mjs';
 import { createAuthMiddleware } from './auth/middleware.mjs';
 import { createTokenService } from './auth/tokens.mjs';
@@ -74,7 +75,14 @@ export function createApp({ db, corsOrigin = '', jwtSecret, loginLimiter }) {
     auth.requireRole('viewer', 'recruiter', 'admin'),
     createCandidateRouter({ db }));
 
-  // Application transitions and audit history remain future PRs.
+  // All workflow reads require a current, active DB-backed JWT session.
+  // Only Recruiter/Admin may transition; authorization happens before handlers.
+  app.use('/api/applications', auth.requireAuth,
+    auth.requireRole('viewer', 'recruiter', 'admin'),
+    createApplicationRouter({ db, requireRole: auth.requireRole }));
+
+  // React workflow controls are intentionally deferred to PR #6; no public
+  // writable demo endpoint is provisioned by this server-only change.
   app.use((_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not found' } }));
   app.use((err, _req, res, _next) => {
     if (err.type === 'entity.too.large') {
