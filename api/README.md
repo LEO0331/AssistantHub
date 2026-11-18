@@ -1,4 +1,4 @@
-# AssistantHub API foundation (PR #2–#4)
+# AssistantHub API foundation (PR #2–#5)
 
 This is an **isolated, not-yet-deployed backend**. React and GitHub Pages continue using their existing local/mock-api sources. The implemented endpoints are:
 
@@ -7,7 +7,12 @@ This is an **isolated, not-yet-deployed backend**. React and GitHub Pages contin
 - GET /api/candidates: synthetic candidate list with server query `q` (name/role/skills), `role`, `availability`, `rate` (all/under40/40to60/over60), `sort` (nameAsc/rateAsc/rateDesc), `page` (1–1000), `pageSize` (1–96); returns { items, page, pageSize, total }.
 - GET /api/candidates/:id: minimal synthetic candidate detail by UUID; 400 for malformed IDs, 404 for missing records.
 
-Candidate discovery is **protected by Bearer JWT with server-validated RBAC** and returns synthetic-only fields. POST /api/auth/login exchanges operator-provisioned credentials for a 15-minute access token; GET /api/auth/me returns the authenticated identity; GET /api/admin/users/summary is admin-only and returns aggregate counts. Application transitions and audit-read endpoints remain unimplemented. Do not expose this unfinished service publicly or use real candidate data.
+Candidate discovery is **protected by Bearer JWT with server-validated RBAC** and returns synthetic-only fields. POST /api/auth/login exchanges operator-provisioned credentials for a 15-minute access token; GET /api/auth/me returns the authenticated identity; GET /api/admin/users/summary is admin-only and returns aggregate counts. The backend additionally implements:
+- `GET /api/applications/:id` — authenticated Viewer/Recruiter/Admin application status and version.
+- `POST /api/applications/:id/transitions` — Recruiter/Admin only; compare-and-swap status/version and audit event in one InnoDB transaction. Terminal Hired/Rejected may not change in this MVP.
+- `GET /api/applications/:id/audit-events` — authenticated paginated audit history, stable ordering, server-owned actor/timestamp/request ID.
+
+The optional React API mode **does not yet render workflow controls or audit history**; that is PR #6. See [PR #5 workflow design](../docs/workflow-audit-pr5.md). Do not expose this unfinished service publicly or use real candidate data.
 
 ## Local setup (Node 20.19+ / 22.12+, Docker)
 
@@ -45,4 +50,4 @@ To run database-backed tests locally (use only a disposable database), set NODE_
 - API database credentials are required through environment variables; no default production password. Docker Compose passwords are clearly local-only and must not be reused outside a developer machine.
 - A green /ready response tests connectivity, not that all schema migrations were applied. Run migrations as a separate deployment step.
 
-The design proposal remains in ../docs/architecture-v2.md and ../docs/api-contract.md. Candidate discovery was added in PR #3 and JWT login/RBAC in PR #4; add transaction-safe workflow/audit writes in PR #5 and secure hiring UI integration in PR #6.
+The design proposal remains in ../docs/architecture-v2.md and ../docs/api-contract.md. Candidate discovery was added in PR #3, JWT login/RBAC in PR #4, and transactional workflow/audit APIs in PR #5. Add secure hiring UI integration in PR #6 and persistent idempotency in PR #7.
