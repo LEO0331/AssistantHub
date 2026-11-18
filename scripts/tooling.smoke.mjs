@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { open, unlink } from 'node:fs/promises';
 import http from 'node:http';
+import { resolve } from 'node:path';
 import { test } from 'node:test';
 import { createServer, preview } from 'vite';
 
@@ -15,6 +17,25 @@ function request(port, path, headers = {}) {
 }
 
 test('development serves JSX and blocks untrusted hosts and private env files', async (t) => {
+  // The repository no longer tracks .env. Use a harmless temporary file so the
+  // access-denial assertion tests an existing private file, not SPA fallback.
+  // Exclusive creation avoids overwriting a developer's local environment.
+  const envPath = resolve(process.cwd(), '.env');
+  let fixture;
+  try {
+    fixture = await open(envPath, 'wx', 0o600);
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+  }
+  if (fixture) {
+    t.after(() => unlink(envPath));
+    try {
+      await fixture.writeFile('ASSISTANTHUB_SMOKE_TEST_ONLY=1\\n');
+    } finally {
+      await fixture.close();
+    }
+  }
+
   const server = await createServer({ server: { port: 0 } });
   t.after(() => server.close());
   await server.listen();
