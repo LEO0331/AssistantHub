@@ -4,7 +4,7 @@ import { createApp } from './app.mjs';
 
 const settings = serverConfig();
 const db = createSequelize(databaseConfig());
-const app = createApp({ db, corsOrigin: settings.corsOrigin });
+const app = createApp({ db, corsOrigin: settings.corsOrigin, jwtSecret: settings.jwtSecret });
 const server = app.listen(settings.port, settings.host, () => {
   console.log('AssistantHub API listening on ' + settings.host + ':' + settings.port);
 });
