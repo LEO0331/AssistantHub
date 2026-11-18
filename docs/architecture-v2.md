@@ -1,130 +1,87 @@
-# AssistantHub 2.0 — proposed architecture
+# AssistantHub 2.0 — architecture (implemented local MVP)
 
-> PR #1 proposed the architecture. PR #2 adds an isolated Express/MySQL foundation. PR #3 adds read-only synthetic candidate list/detail endpoints and an optional, separately configured server-paginated React browser. PR #4 adds scrypt password verification, short-lived JWTs, current-database-role RBAC, operator-only provisioning, and in-memory frontend authentication. Default GitHub Pages remains an offline demo; the backend is not deployed. Authentication and candidate RBAC were implemented in PR #4; PR #5 implements transactional hiring status changes and audit-read APIs on MySQL. PR #6 connects authenticated server-authoritative hiring controls, version-conflict recovery and paginated audit history to the React API browser. PR #8 explicitly enforces loopback-only backend exposure. GitHub Pages remains public but offline-only; production backend deployment is **not authorized**.
+**Current as of November 18, 2026**, after PRs #1–#8 and the merged PR #39 (offline UI) and PR #37 (React dependency compatibility). This page supersedes the earlier implementation proposal. For the precise release and threat boundaries, read [current implementation status](current-state.md) and [release-readiness decision](release-readiness-pr8.md).
 
-## 1. Purpose and boundaries
+## 1. Purpose and execution boundaries
 
-Evolve AssistantHub from a client-only assistant/talent directory into a **small hiring workflow and audit demo** that is credible in backend engineering interviews. Keep the existing deployed application functional while moving one vertical slice at a time.
+AssistantHub demonstrates two related but **noninterchangeable** systems:
 
-### Present implementation (verified on main at PR #1)
-- React 18 + Vite SPA at the GitHub Pages base path /AssistantHub/; Vite output directory is build/.
-- Seeded @faker-js/faker profiles, up to 5,000 in-browser records; search, filters, pagination and a virtualized list.
-- src/services/talentAdapter.js exposes local and mock-api modes; mock-api simulates a delay and does **not** make HTTP requests.
-- Shortlist and seed use localStorage; hiring status changes and inquiries are not authoritative server data.
-- JSON import/export, CSV shortlist export, a rule-based help chatbot, map modal and details drawer.
-- Jest/React Testing Library coverage gates, lint, Vite build, tooling checks and GitHub Actions Pages deployment.
+1. **Public GitHub Pages:** an offline React/Vite talent-pool portfolio demo. `local` and `mock-api` modes generate data **inside the browser**; the mock adapter introduces a delay but makes no HTTP request. Shortlisting and the local hire-status pipeline are browser-managed and not subject to JWT authorization.
+2. **Optional local full-stack demo:** the same frontend can switch to a configured `api` mode, sign in with an operator-provisioned account and access **synthetic-only** hiring data backed by Express, Sequelize and MySQL. It is **not publicly hosted**. `API_HOST` is restricted to loopback; GitHub Pages' production bundle contains no API origin.
 
-### MVP boundaries
-- One synthetic candidate has at most one application in this demo. Multi-company tenancy, job requisitions, scheduling, email delivery and real applicant data are out of scope.
-- Viewer can read; Recruiter and Admin can make permitted application transitions. Admin user management is deferred.
-- Server persistence and auditability replace browser state as the authority for the live API mode. Offline local/mock modes remain available and explicitly labeled non-authoritative.
-- No AI ranking, LLM integration, Redis, queues, microservices or Kubernetes unless supported by a documented, tested requirement.
+```text
+Public: GitHub Pages /AssistantHub/ (React/Vite, build/)
+  ├── local + mock-api → in-browser faker generator, search, shortlist/status
+  └── api mode is disabled when no API origin is configured
 
-## 2. Proposed modular-monolith components
+Private local workstation only:
+React/Vite :3000 — Bearer JWT over loopback → Express /api :3100
+                                                ├── auth, login limiter, RBAC
+                                                ├── candidate search + application lookup
+                                                ├── versioned hiring workflow service
+                                                ├── audit-history API
+                                                ├── actor-scoped idempotency + correlation logs
+                                                └── Sequelize → MySQL 8.4
+                                                    ├── users
+                                                    ├── candidates
+                                                    ├── applications
+                                                    ├── audit_events
+                                                    └── idempotency_records
+```
 
-~~~text
-GitHub Pages: React/Vite SPA (/AssistantHub/)
-    | HTTPS JSON requests; auth; request ID
-    v
-Separately hosted Express API (/api/v1 or /api, to be finalized in PR #2)
-    |- request validation and error boundary
-    |- JWT authentication and deny-by-default RBAC
-    |- candidate query controller/service
-    |- application workflow service and state machine
-    |- audit history read service
-    v
-Sequelize with explicit MySQL transactions and migrations
-    |- users
-    |- candidates
-    |- applications (status, version)
-    |- audit_events (append-only business history)
-    |- idempotency_records (PR #7 committed operations)
-~~~
+There is **no** deployed public API, production tenant isolation, shared writable demo identity or real applicant PII. The API mode requires explicitly configured `VITE_ASSISTANTHUB_API_BASE_URL` for local use and an exact `API_CORS_ORIGIN`.
 
-Use a modular monolith, rather than separate services, to keep transaction boundaries, local development and debugging understandable. Controllers translate HTTP contracts; services enforce domain rules; database modules own persistence. Do not put authorization or workflow decisions exclusively in React.
+## 2. Implemented modules
 
-### Planned repository boundaries
-- src/: existing frontend; later split candidate, hiring and audit UI into feature modules.
-- src/services/talentAdapter.js: stable point for adding an api adapter without altering local/mock behavior.
-- api/src/routes, controllers, services, middleware, models, validators: new backend, introduced in PR #2.
-- api/migrations and api/seeders: deterministic, repeatable database setup.
-- api/tests: unit, HTTP integration, transaction and concurrency cases.
-- docs/: architecture, API contract, threat model, verification evidence.
+| Location | Responsibility |
+| --- | --- |
+| `src/App.jsx`, `src/features/*`, `src/state/uiReducer.js` | Offline controls, candidate UI, local shortlist, detail drawer and conditional authenticated API browser |
+| `src/services/talentAdapter.js`, `src/data/assistantFactory.js` | Deterministic `local` data generation and delayed `mock-api` simulation, not a network service |
+| `src/services/candidateApi.js`, `src/services/workflowApi.js` | Authenticated HTTP candidate/workflow clients with server response validation, cancellation and explicit retry semantics |
+| `api/src/app.mjs`, `api/src/routes/*`, `api/src/auth/*` | Express HTTP boundary, 4 KB JSON limits, exact-origin CORS, JWT authentication, current-account role enforcement |
+| `api/src/services/workflowService.mjs` | Server-owned transition state machine, conditional SQL update, transactional audit and actor-scoped idempotent replay |
+| `api/src/db/*`, `api/migrations/*` | Sequelize models, additive schema migrations and deterministic synthetic seed |
+| `api/src/observability/requestObserver.mjs` | Allowlisted structured request metadata, server-generated correlation IDs (no raw URL/body/token logging) |
+| `.github/workflows/*`, `scripts/release-guard.mjs`, `scripts/verify-react-stack.mjs` | Strict npm and security audits, React-peer compatibility, offline Pages release checks, real-MySQL API CI and Lighthouse |
 
-## 3. Domain model and key constraints (proposed)
+## 3. Domain model and authorization
 
-| Entity | Key fields | Constraints / rationale |
-| --- | --- | --- |
-| users | id, email, password_hash, role, is_active | unique normalized email; password hashes, not plaintext |
-| candidates | id, name, role, skills, availability, hourly_rate, created_at | synthetic demo records; use explicit query indexes |
-| applications | id, candidate_id, status, version, updated_at | candidate_id unique in MVP; version starts at 1; FK |
-| audit_events | id, application_id, actor_id, from_status, to_status, occurred_at, request_id | FK; immutable business history; transactionally inserted |
-| idempotency_records (PR #7) | id, actor_id, idempotency_key, application_id, payload_hash, response_body, request_id, completed_at, expires_at | Unique (actor_id, idempotency_key); atomic response replay; 7-day operator-controlled expiry |
+| Table | Important fields and constraints |
+| --- | --- |
+| `users` | UUID, normalized unique email, scrypt password hash, role (`viewer`, `recruiter`, `admin`), active flag |
+| `candidates` | UUID, synthetic name/role/skills/availability/hourly rate |
+| `applications` | UUID, unique candidate ID, status, integer `version` (optimistic concurrency) |
+| `audit_events` | Event UUID, application/actor IDs, prior/new status, reason, server request ID and timestamp |
+| `idempotency_records` | Unique (`actor_id`, `idempotency_key`), canonical SHA-256 request hash, application ID, original response JSON and retention metadata |
 
-Exact column types and migrations are PR #2 deliverables. Define indexes based on actual query patterns, not speculative optimizations.
+The API **authenticates and authorizes every request**; the UI hiding a button is not a permission check. Viewer can read synthetic candidate/application/audit data; Recruiter and Admin may change hiring status. Only Admin may read aggregated account counts. Login returns a 15-minute JWT; the server rechecks user activation and current role on protected calls. There is **no per-record/tenant ownership authorization**, so no real candidate data may be added.
 
-### Allowed hiring status transitions
+The server-enforced state machine is:
 
-- New -> Contacted or Rejected
-- Contacted -> Interview or Rejected
-- Interview -> Hired or Rejected
-- Hired and Rejected are terminal in the MVP.
+```text
+New ──→ Contacted ──→ Interview ──→ Hired (terminal)
+ │           │             │
+ └──→ Rejected (terminal) ←─┴─────────
+```
 
-The current frontend offers a different local-only linear status sequence; it must **not** be presented as enforcing this proposed state machine. Backend domain validation is required before the new workflow is considered implemented.
+Specifically, `Rejected` is permitted from `New`, `Contacted` or `Interview`. `Hired` and `Rejected` cannot transition further. A write supplies `expectedVersion`; a conditional MySQL update protects against concurrent changes. The **status update, audit insertion and idempotency response record** share a transaction. A stale request fails with 409; an invalid transition fails with 422; an audit insertion failure rolls back the write. Authenticated audit reads are paginated.
 
-### Workflow and audit invariants
-1. Only authenticated Recruiter/Admin roles may transition an application; all endpoints validate object-level permissions.
-2. The server checks that the current status can transition to the target status.
-3. An update requires expectedVersion from the client. The database update is conditional on application ID, version and current status; exactly one affected row means success.
-4. On success, increment the version once and persist the corresponding audit event within the **same** MySQL transaction.
-5. If update affects zero rows, distinguish not-found from stale version and return an appropriate 404 or 409. Invalid state transition is 422.
-6. If the audit write fails, roll back the status update. Never report a committed transition without its audit event.
-7. Audit history is server-authored. Client-supplied actor IDs, timestamps, prior status or version increment are not trusted.
-8. PR #7 closes PR #5's lost-HTTP-response window with a durable actor-scoped UUID-v4 Idempotency-Key, payload hash and stored response in the same transaction. Unknown outcomes may be manually retried with the exact original key/payload while retained.
+On ambiguous HTTP outcomes, a client may **explicitly retry the same UUID-v4 idempotency key and identical payload** while the record is retained. The database replays the original committed response, not a duplicate transition. Seven-day idempotency expiry is operator-pruned; the browser's pending key exists only in component memory. See [PR #7 idempotency and recovery](idempotency-pr7.md) for caveats.
 
-### Expected concurrency example
-Two recruiters read application version 7 at Interview. Recruiter A requests Hired at version 7; Recruiter B requests Rejected at version 7. Only one conditional update may commit, yielding version 8 and exactly one audit event. The other request receives 409 Conflict with no successful-transition audit record. Concurrency tests must use real MySQL, not only mocked ORM calls.
+**The offline demo is different:** its own linear `New → Contacted → Interview → Hired` pipeline has no `Rejected` or audit events. In the merged PR #39 UI, advancing an unshortlisted candidate directly from the offline detail drawer also shortlists them; `Hired` stays final. This must not be described as an API-authorized business transaction.
 
-## 4. Authentication, authorization and public-demo posture
+## 4. Release, operations and verification
 
-- Planned: hashed-password login, short-lived signed JWT access tokens, server-validated expiry/issuer/audience where applicable, and no anonymous self-registration.
-- Keep access tokens in frontend memory, not localStorage. Do not embed backend signing secrets or privileged credentials in GitHub Pages assets.
-- Deny by default. 401 means missing/invalid authentication; 403 means authenticated but unauthorized.
-- Viewer: candidate/application read and permitted audit history read. Recruiter: those reads plus valid transitions. Admin: same transition rights; account administration is a future scope decision, not a current endpoint.
-- Query results and audit metadata must be scoped, validated and redacted appropriately. Never expose password hashes or internal secrets.
-- GitHub Pages remains static and public; the backend is deployed separately, uses HTTPS, restricts CORS to approved origins and protects its database from direct public access.
-- Use synthetic candidates only. Public users may browse a redacted read-only dataset; writable demos must be isolated per session and reset/expire. Never make a shared public write account authoritative.
-- The existing client-only modes are editable from browser devtools. Do not describe them as secure or audited.
+- The public `/AssistantHub/` site is built with `VITE_ASSISTANTHUB_API_BASE_URL=""` and published from `build/` through GitHub Actions. Static release tests reject a configured backend URL, private assets, source maps and broken base paths. The [PR #37 merge deployment](https://github.com/LEO0331/AssistantHub/actions/runs/44249787263) completed successfully on November 18, 2026.
+- `api/` is **loopback-only** and has no public deployment workflow. JWT signing secrets and MySQL credentials remain private. Health readiness checks connectivity rather than schema completeness; migrations are a separate step.
+- Frontend CI runs a **React peer dependency guard before strict `npm ci`**, Jest/coverage, lint, production-only high/critical audit, build, tooling and Pages release checks. React and React DOM remain **18.3.1**; React Leaflet 4.x and the clipboard integration prevent an unreviewed React 19-only bump. See [React migration policy](react-dependency-policy.md).
+- Backend CI uses disposable MySQL for repeatable migrations/seeds, auth/RBAC, concurrent updates, rollback and idempotency tests. Report-only full npm audits still surface development-tool advisories; passing production gates is not equivalent to zero vulnerabilities.
+- No public backend, real personal records, distributed login limit, token denylist, database-level audit immutability, backup rehearsal or tenant ownership exists. See the [release NO-GO conditions](release-readiness-pr8.md).
 
-## 5. Incremental adapter migration
+## 5. Roadmap status and remaining work
 
-1. Preserve existing React route/base path and local/mock-api behavior.
-2. PR #2: introduce isolated Express/MySQL backend without frontend consumer changes; add migrations, synthetic seeds, two health checks, HTTP and real-MySQL integration tests.
-3. PR #3: add an **explicit** API source and separate read-only candidate browser (no fake contact fields), server pagination/filtering, response validation, AbortController cancellation, loading/error/retry states; keep local/mock modes unchanged.
-4. PR #4: add authenticated API sessions and server-side authorization; do not rely on hidden UI controls.
-5. PR #5: implement transactional state transitions and audit read API (completed in local backend, real-MySQL tests).
-6. PR #6: integrate workflow controls and audit timeline into React; no duplicate browser business authority in API mode (implemented in local full-stack MVP).
-7. PR #7: implement durable idempotency, explicit same-key replay, structured request logs, retention and real-MySQL failure tests (completed in local MVP).
-8. PR #8: tighten action SHA pins, CI audit/Pages artifact gates, API response headers and loopback-only listener, and document deployment GO/NO-GO. Public API demo is **NO-GO**, not shipped.
+PRs **#1–#8 are completed**, with PR #30 implementing the last milestone. Follow-up PR #39 fixed the offline detail-drawer status action and removed the Demo Checklist; PR #37 restored React 18/DOM 18 compatibility with future-upgrade tests. Current GitHub activity and branch protection settings should be verified separately.
 
-Only PR #6 is the functional MVP. A passed docs-only PR #1 must not be represented as a working backend or security implementation.
+Future work is **not a missing part of the original eight-PR MVP**: React 19 migration with compatible integrations, separate reviewed public API infrastructure, tenant/record RBAC, multi-node abuse protection, JWT revocation, tamper-evident audit retention, and operational backup/monitoring. Do not quietly claim these features exist.
 
-## 6. Deployment, rollback and quality gates
-
-- Do not modify GitHub Pages settings, /AssistantHub/ Vite base, build/ output, existing workflows, or npm dependencies in PR #1.
-- PR checks currently include npm ci, npm run lint, npm run test:ci, npm run build, npm run test:tooling. Keep branch protections and existing security gates intact; never bypass a failed gate to ship.
-- Future API CI must install and migrate a test MySQL database, run HTTP and transaction tests, and verify no secrets or real candidate data are committed.
-- Each PR should have a focused diff, risk/rollback notes and verifiable acceptance criteria. New API functionality should be feature-gated until it passes.
-- Preserve the last working Pages frontend when backend deploys fail; offline mode is a demonstration fallback, not a production consistency solution.
-- Do not merge automatically; review changes and check status before integration.
-
-## 7. Open decisions for implementation PRs
-
-- Final Express route prefix, package/module format, Node baseline and database migration tool (PR #2).
-- Whether candidate profiles may include fake contact details in the public read model or should be consistently redacted (PRs #2–#3).
-- Exact authentication token refresh/logout strategy and account provisioning (PR #4).
-- Audit retention/immutability enforcement and RBAC for history reads (PR #5).
-- Idempotency key retention, payload-mismatch response and pending-request concurrency semantics (PR #7).
-- Public demo hosting provider and session isolation/reset architecture (PR #8).
-
-See [api-contract.md](api-contract.md) for proposed HTTP responses and error semantics. The existing [system design review](system-design-review.en.md) describes the original frontend, not the proposed implementation.
+See [implemented API contract](api-contract.md), [auth design](security-auth-pr4.md), [PR #5 transaction detail](workflow-audit-pr5.md), [frontend workflow UI](hiring-ui-pr6.md) and the [original offline/frontend design review](system-design-review.en.md).

@@ -2,7 +2,9 @@
 
 ## What is implemented
 
-The **isolated, not-yet-deployed** Express/MySQL API now exposes:
+**Historical scope:** PR #5 introduced the initial transactional hiring workflow before idempotency was built. **Current status (PR #7 and later):** every transition POST also requires a UUID-v4 `Idempotency-Key`, and exact actor/key/payload retries may replay the original committed response. Do not use the original example without its key. See [current contract](api-contract.md) and [idempotency guide](idempotency-pr7.md).
+
+The **isolated, not-yet-deployed** Express/MySQL API exposes:
 - `GET /api/applications/:id` — Viewer, Recruiter, Admin; returns { id, candidateId, status, version, updatedAt }.
 - `POST /api/applications/:id/transitions` — **Recruiter/Admin only**; body { toStatus, expectedVersion, reason? }; returns { application, auditEventId }.
 - `GET /api/applications/:id/audit-events` — Viewer, Recruiter, Admin; page 1–1000, pageSize 1–50 (default 20), chronological with ID tie-breaker.
@@ -56,12 +58,13 @@ Initial seeded application status is `New`, version `1`; the sample ID correspon
 ```http
 POST /api/applications/00000000-0000-4000-8000-000000000101/transitions
 Authorization: Bearer <in-memory-access-token>
+Idempotency-Key: 0b0abda8-2cff-4874-9fe3-55f0cb784a41
 Content-Type: application/json
 
 {"toStatus":"Contacted","expectedVersion":1,"reason":"Introductory review"}
 ```
 
-Success returns status `Contacted`, version `2` and an auditEventId. A repeated POST with `expectedVersion: 1` receives 409 rather than writing a second audit event. **No persistent idempotency key or result replay yet**: PR #7 will implement idempotency records and safe retries. Until then, refresh state/history after timeouts before deciding how to proceed.
+Success returns status `Contacted`, version `2` and an auditEventId. **As implemented since PR #7**, repeating the **identical** actor/key/payload returns the original 200 response with `Idempotency-Replayed: true`, not a second audit event. A fresh key carrying the now-stale `expectedVersion: 1` returns 409. On network uncertainty, do **not** generate a new key for an unconfirmed request; use the [explicit same-key recovery contract](idempotency-pr7.md).
 
 ```http
 GET /api/applications/00000000-0000-4000-8000-000000000101/audit-events?page=1&pageSize=20
@@ -87,6 +90,6 @@ The tests use test-only synthetic fixtures and clean up inserted records. Existi
 
 - **Synthetic single-tenant data only**: the current RBAC grants all authenticated viewers access to all synthetic application IDs. Real hiring or bank/customer data would require tenant/record ownership authorization, field masking, audit retention and privacy design.
 - HTTP routes have no audit update/delete endpoint, but **database-level append-only enforcement has not been established**; a privileged DBA can edit rows. Database grants, retention, immutable log transport and monitoring are future hardening.
-- Application writes are serialized through MySQL's conditional version update; this does not provide exactly-once HTTP delivery when responses are lost. PR #7 is specifically for persistent idempotency, request replay semantics and structured logging.
-- PR #5 introduced server-only workflow APIs; PR #6 now connects authenticated workflow controls and audit history to React. Local/mock modes remain offline and unaudited.
+- PR #5's conditional version update alone did not protect response-loss retries. **PR #7 now adds** actor-scoped persisted idempotency claims and response replay (seven-day retention, pending key held in browser memory). This is not a guarantee beyond retention or across lost client-side keys.
+- PR #5 introduced server-only workflow APIs; PR #6 connected authenticated workflow controls and audit history to React. The public Pages build remains offline-only, and local/mock modes remain unaudited.
 - Do **not** deploy this unfinished API publicly, put real applicants into the database, share writable accounts or claim production banking-grade security. Existing root/API dependency advisories remain outstanding, and no CI policy has been relaxed.
