@@ -1,8 +1,10 @@
 # Dependabot review — 2026-10-05
 
-## Result
+## Result (historical October 5 snapshot)
 
-All 63 alerts in the original review are resolved by the current lockfile: affected dependencies have been removed or every remaining instance is outside the advisory range. npm audit reports **0 vulnerabilities**. No alerts were dismissed.
+> **Not a current security claim.** This review records the October 5, 2026 lockfile migration and its then-clean npm audit. New advisories appeared by November 18; the subsequent full root audit reports **43 affected package names** (39 high, 4 moderate), although the root **production-only** audit at PR #37 CI reported zero. Recheck the report-only workflow before quoting current counts. See [dated dependency assessment](security-dependency-assessment-2026-11-18.md) and [current status](current-state.md).
+
+All 63 alerts from the **October 5 original review** were resolved in **that review's lockfile**: affected dependencies were removed or remaining instances were outside the advisory ranges **at that date**. npm audit reported **0 vulnerabilities at that time**; no alerts were dismissed as part of that review.
 
 The initial 2026-10-02 patch fixed 44 alerts and documented 19 deferrals. This migration removes those remaining vulnerable toolchain paths rather than maintaining CRA-specific security workarounds.
 
@@ -92,6 +94,6 @@ Requires Node 20.19+ or 22.12+ and Vite's modern-browser baseline. Browser suppo
 - Production build and ESLint passed. No separate typecheck is configured for this JavaScript app.
 - Two tooling integration checks cover transformed JSX, host rejection, private-file denial, cross-origin headers, GitHub Pages asset URLs and manifest resolution.
 - Browser checks passed in development and production preview: talent rendering/details, lazy chatbot, and Leaflet map dialog; no browser errors observed.
-- npm audit reports 0 vulnerabilities. Clean npm ci and GitHub Actions verification accompany delivery.
+- **October 5 evidence:** npm audit reported 0 vulnerabilities and clean npm ci/CI accompanied that historical delivery. This is **not** the current audit result.
 
-Vite emits an advisory warning about the existing main bundle exceeding 500 kB. This is a performance follow-up, not a security finding. Future dependency releases can introduce new advisories; zero current audit findings is not a guarantee against undiscovered vulnerabilities.
+Vite emits an advisory warning about the existing main bundle exceeding 500 kB. This is a performance follow-up, not a security finding. Later advisories are already documented in the November 18 assessment; even a current zero production-only audit count does not guarantee safety or eliminate development-toolchain findings.

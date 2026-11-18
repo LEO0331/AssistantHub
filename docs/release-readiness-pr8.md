@@ -1,14 +1,14 @@
 # AssistantHub 2.0 — PR #8 final release and security decision
 
-**Status / release decision:** **GO** for the existing offline-only GitHub Pages portfolio demo **after PR review and successful main-branch deploy checks**. **NO-GO** for public hosting of the authenticated Express/MySQL hiring backend, real candidate data, or shared write accounts. PR #8 does not launch a backend or change Pages repository settings.
+**Post-merge verification (November 18, 2026):** PR #30 (milestone #8), PR #39 (offline status UI cleanup) and PR #37 (React peer compatibility) are all **merged**. The [main-branch deployment after PR #37](https://github.com/LEO0331/AssistantHub/actions/runs/44249787263) completed successfully, publishing the **static offline Pages artifact**. **GO** for this reviewed offline GitHub Pages demo; **NO-GO** for public hosting of the authenticated Express/MySQL API, real candidate data, or shared writable accounts. No public backend has been launched. See the [verified current-state page](current-state.md) for source-of-truth details.
 
-The project has an interview-ready **local synthetic-data full-stack workflow**, not a production multi-tenant hiring system. A passing CI gate is evidence for tested properties, **not a blanket security certification**.
+The project has an interview-ready **local synthetic-data full-stack workflow**, not a production multi-tenant hiring system. Its React runtime remains **React/React DOM 18.3.1** after the [PR #37 compatibility resolution](react-dependency-policy.md), and the [PR #39 offline UI fix](current-state.md) does not alter the MySQL API. A passing CI gate is evidence for tested properties, **not a blanket security certification**.
 
 ## What can be safely released
 
 | Surface | Decision | Implemented enforcement |
 | --- | --- | --- |
-| Public React/Vite GitHub Pages, local/mock demo | **GO after review** | Offline-only compiled artifact gate, exact /AssistantHub/ asset paths, browser build tests, Lighthouse and production dependency high/critical gate |
+| Public React/Vite GitHub Pages, local/mock demo | **GO, currently deployed offline-only** | Offline-only compiled artifact gate, exact /AssistantHub/ asset paths, browser build tests, Lighthouse and production dependency high/critical gate |
 | Local Express/MySQL with synthetic seeds and privately provisioned accounts | **GO for isolated local demo** | API_HOST loopback-only, JWT/RBAC, 4 KB JSON limit, CORS exact origin, MySQL transactions/audit, durable idempotency |
 | Public authenticated API, real candidate records or external shared Recruiter account | **NO-GO** | Blocked by loopback-only API_HOST; additional architecture and controls below required |
 | Banking/financial production workload | **NO-GO** | Requires regulated data governance, formal threat model/pen test, tenant isolation, secrets/incident operations, audit retention, formal controls |
@@ -19,7 +19,7 @@ This PR makes public API binding **fail closed**: serverConfig accepts only API_
 
 - Backend sends Cache-Control: no-store **even on malformed/oversized JSON errors**, X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy: no-referrer, a deny-by-default API CSP, and a restrictive Permissions-Policy. HTTP tests assert these headers and reject external API_HOST settings. CORS and JWT checks remain separate controls.
 - The Pages build is forced to an empty VITE_ASSISTANTHUB_API_BASE_URL in validation and deployment. The Node release guard verifies that final build/index.html does **not** contain an API origin (or unresolved Vite template), referenced JS/CSS/manifest paths remain under /AssistantHub/, and build/ has no private/source paths, sourcemaps, symlinks or known server-secret variable markers. It is an **artifact check, not an exhaustive secret scanner**.
-- GitHub Actions dependencies pinned to full commit SHAs; CI/Lighthouse have explicit read-only token permissions; only the Pages deployment job retains pages:write and id-token:write. A native test scans workflows to fail if a new mutable action tag, privileged trigger or missing mandatory audit/deploy check appears.
+- GitHub Actions dependencies pinned to full commit SHAs; a merged update subsequently moved some action pins to newer verified SHA refs; CI/Lighthouse have explicit read-only token permissions; only the Pages deployment job retains pages:write and id-token:write. A native test scans workflows to fail if a new mutable action tag, privileged trigger or missing mandatory audit/deploy check appears.
 - Root Pages CI **and the actual deployment workflow** run npm audit --omit=dev --audit-level=high. API CI retains npm audit --omit=dev --audit-level=high --prefix api, along with migrations twice, synthetic seeds twice and real-MySQL auth/RBAC/concurrency/rollback/idempotency tests.
 - Weekly Dependabot updates for root npm, api npm and GitHub Actions create independent reviewable PRs. These are **not** automatic remediations or proof that all vulnerabilities are fixed.
 
@@ -44,13 +44,13 @@ Use only a developer/test workstation with Docker, Node meeting the repository e
 
 The API runtime is never bundled into build/. The public browser defaults to the offline local/mock demo. Do not put DB_PASSWORD, AUTH_JWT_SECRET, user passwords, or any privileged token into VITE_* variables or GitHub Pages repository variables.
 
-## Merge and deployment checklist
+## Post-merge release verification checklist (rerun after future changes)
 
-- [ ] Human-review PR #30 diff for API_HOST guard, headers, Pages release guard, GitHub Action SHA pins, tests and Dependabot configuration.
-- [ ] Confirm API CI, frontend CI, Lighthouse, and dependency-assessment workflow completed successfully **on the final PR head**.
+- [x] PR #30 was reviewed and merged; the API_HOST guard, headers, Pages release guard, action pins, tests and Dependabot configuration are present on `main` as of this snapshot.
+- [x] PR #30's final API CI, frontend CI, Lighthouse and dependency-assessment checks passed at merge. **For new changes, recheck their own latest run** rather than relying on these historical statuses.
 - [ ] Verify branch protection and required status checks in GitHub repository settings; these settings cannot be established by merely committing this PR. Require review for security-sensitive workflow changes if available.
 - [ ] Confirm GitHub Pages Source is GitHub Actions under Settings → Pages; this repository's workflow does not mutate that setting. On merge to main, its read-only build job enforces offline-only release checks before Pages artifact upload.
-- [ ] Confirm deployed /AssistantHub/ stays functional as local/mock demo. Do **not** interpret unavailable API mode as a failed deployment: it is intentionally disabled on public Pages.
+- [x] The [PR #37 merge deployment](https://github.com/LEO0331/AssistantHub/actions/runs/44249787263) completed build + deploy. Manual per-browser smoke testing is a **separate step**, not evidenced by CI alone. Unavailable API mode is intentional on public Pages.
 - [ ] Do not configure public database credentials, an API_HOST of 0.0.0.0, a shared public Admin account, or real candidate PII as part of this release.
 
 ### Rollback / incident response
@@ -65,7 +65,7 @@ For backend operation recovery, consult docs/idempotency-pr7.md. Losing an HTTP 
 
 | Open item | Current state | Required before public API |
 | --- | --- | --- |
-| npm advisories | Historical root audit 43 affected package names (39 high, 4 moderate); API full audit six (4 high, 2 moderate), including two moderate production findings | Re-assess all current GHSA findings; patch with separate reviewed compatibility PRs; do not use npm audit fix --force blindly |
+| npm advisories | **Dated November 18 audit snapshot**, not a continuously updated count: root full audit 43 affected package names (39 high, 4 moderate), API full audit six (4 high, 2 moderate), including two moderate API production findings. Root production audit was 0 at PR #37 CI | Re-assess all current GHSA findings; patch with separate reviewed compatibility PRs; do not use npm audit fix --force blindly |
 | JWT lifecycle | 15-minute JWT, user/role checked against DB, no refresh or denylist | Key rotation, logout/revocation design, monitored auth abuse |
 | Login abuse | IP limit tracked in process memory | Centralized per-user/IP limiter, trusted reverse-proxy policy, monitoring and DDoS protections |
 | Multi-tenant authorization | Global synthetic candidate ID visibility to authenticated users | Tenant/job ownership scopes, field-level RBAC, data minimization/PII safeguards |

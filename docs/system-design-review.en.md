@@ -1,17 +1,19 @@
 # AssistantHub System Design Review (English)
 
+**Historical design review (offline mode).** This review describes the original frontend-only architecture and its data-structure tradeoffs. It is **not** a description of the complete current repository: PRs #2–#8 implemented a separate, **loopback-only Express/MySQL API** with JWT/RBAC, optimistic transitions, durable audit and idempotency; the public Pages bundle still runs offline. The merged PR #39 changed the offline detail-drawer status button and removed the Demo Checklist; PR #37 retained React 18.3.1. Read [current architecture](architecture-v2.md) and [verified status](current-state.md) for up-to-date system-level behavior.
+
 ## 1. Scope and Goal
-This review covers the current frontend-only architecture of AssistantHub (React SPA), focusing on:
+This historical review covers the original frontend-only architecture of AssistantHub (React SPA), focusing on:
 - system architecture and module boundaries
 - design tradeoffs and rationale
 - data-structure choices and alternatives
 - deep-dive question preparation for technical review sessions
 
 ## 2. High-Level Architecture
-AssistantHub is a single-page React application with no backend dependency.
+The **public/offline mode described in this review** is a single-page React application with no backend dependency. The optional, separately configured authenticated local API mode was implemented later.
 
 ### Layered view
-- Presentation layer: `App.js`, `ProfileCards.js`, `SearchBar.js`, `ContactModal.js`, CSS
+- Presentation layer: `App.jsx`, `ProfileCards.js`, `SearchBar.js`, `ContactModal.js`, CSS
 - UI state layer: `useReducer(uiReducer)` + local `useState`
 - Persistence layer: `usePersistentState` (localStorage-backed)
 - Domain/data layer: `assistantFactory` + `talentAdapter`
@@ -26,7 +28,7 @@ AssistantHub is a single-page React application with no backend dependency.
 
 ## 3. Component and Module Boundaries
 
-### Core container (`App.js`)
+### Core container (`App.jsx`)
 Responsibilities:
 - orchestration of state and side effects
 - data loading
@@ -155,13 +157,13 @@ Why not alternatives now:
 - local persistence for shortlist and seed
 
 ### Weaknesses / Risks
-- large `App.js` creates scaling and review friction
+- large `App.jsx` creates scaling and review friction
 - local-only data means no multi-user consistency or audit trail
-- no backend contract validation (only frontend schema guards)
+- **Original offline mode** has no backend contract validation; the later API mode validates server responses and has real-MySQL integration tests
 - action strings in reducer are typo-prone
 
 ### Future evolution options
-- split `App.js` into feature hooks (`useTalentPool`, `useShortlistFlow`, `useDemoImportExport`)
+- split `App.jsx` into feature hooks (`useTalentPool`, `useShortlistFlow`, `useDemoImportExport`)
 - normalize talent store if id-based operations increase
 - migrate adapter to real API with error handling/retry/cancelation
 - introduce TypeScript or runtime schema layers for stronger contracts
@@ -190,7 +192,7 @@ Suggested answer:
 
 ### Q6. What is the migration path to a real backend?
 Suggested answer:
-- Replace `mock-api` adapter implementation with real HTTP client, preserve `loadTalentPool` interface, then progressively move shortlist/inquiry flows to backend endpoints while keeping UI contracts stable.
+- **What shipped since this review:** a separate authenticated API browser and client were added without replacing the offline `mock-api` adapter. Candidate discovery and hiring status/audit now use real MySQL only in explicitly configured API mode; shortlist/inquiry in offline mode remains browser-managed. For production, tenant/object ownership and operational security still need separate work.
 
 ### Q7. What are current correctness guardrails for import flow?
 Suggested answer:
@@ -208,4 +210,4 @@ Suggested answer:
 - How would you add role-based access control if this moves from demo to production?
 
 ## 8. Bottom Line
-The current design is pragmatic for a frontend demo with deterministic data and medium list sizes. The biggest architectural debt is not incorrect structure, but concentration of orchestration logic in `App.js` and lack of backend-backed state authority. The existing module seams (`talentAdapter`, reducer, hooks) are good foundations for incremental production hardening.
+The **original offline design** remains pragmatic for deterministic data and medium list sizes. Concentration of orchestration logic in `App.jsx` remains a maintainability tradeoff; **API mode now has backend-backed authoritative workflow state** while the public offline demo does not. The existing module seams (`talentAdapter`, reducer, hooks) are good foundations for incremental production hardening.

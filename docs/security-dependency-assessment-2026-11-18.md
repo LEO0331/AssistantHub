@@ -1,6 +1,6 @@
 # Dependency security assessment — November 18, 2026
 
-> **Assessment, not remediation.** This document covers the lockfile and npm audit evidence on AssistantHub main following PR #22. It does not assert that dependencies are safe, and it makes no claim that an upstream fix exists without independent verification.
+> **Historical assessment, not a current npm audit.** The evidence below is pinned to the PR #22 lockfile and November 18, 2026 checks. Subsequent merged PRs #30, #39 and #37 added release security gates, UI fixes, and a React 18/DOM 18 compatibility guard. The root production-only audit at PR #37 CI reported no findings, while the **full root audit still reported 43 affected packages**. Rerun audit workflows before making any **current** vulnerability assertion. [Current implementation and audit-context summary](current-state.md).
 
 ## Evidence and confirmed facts
 
@@ -10,7 +10,7 @@
 - All 105 Jest tests and tooling smoke tests passed on PR #22. Those results are **functional**, not evidence of a clean dependency audit.
 - `docs/dependabot-review.md` recorded zero vulnerabilities on **October 5**, prior to newer advisories. Treat it as a dated historical review, not the current security posture.
 - There is no `.github/dependabot.yml` in the checked baseline; automatic Dependabot security-update availability is repository-setting dependent and was not independently verified by this inspection.
-- The existing CI workflow does not call `npm audit`; the new workflow is **diagnostic/report-only**. A green report-generation check means the assessment completed, **not** that the lockfile passed a security gate.
+- **At the PR #22 snapshot:** CI did not include the later production audit gate. **Today (PR #8 onward):** root CI and Pages deploy block high/critical **production-only** audit findings, and API CI has its own high/critical production audit gate. The full audit assessment remains **report-only**; green report generation does not indicate a clean dependency tree.
 
 ## Live audit results (PR #23 diagnostic workflow)
 
@@ -56,7 +56,7 @@ A separate GitHub Actions `Dependency security assessment (report only)` workflo
 
 The script classifies named packages, installed versions and occurrence counts, direct vs transitive dependencies, whether a package appears in the production-only audit, available advisory links, and npm-suggested fixes. It fails on audit retrieval/parsing errors instead of presenting unknown findings as zero. It writes JSON/Markdown into an ignored local `.security-reports/` folder and prints the Markdown to Actions logs and job summary.
 
-The report-only job returns success when it **reliably generates findings**, even if vulnerabilities exist. It is not a replacement for a future **blocking security gate**; the existing CI, coverage, tooling checks and Pages deployment policies are unchanged.
+The report-only job returns success when it **reliably generates findings**, even if vulnerabilities exist. It is not a substitute for the **now-implemented production-only high/critical audit gates** in frontend CI, Pages deployment and API CI. This paragraph preserves the original PR #23 assessment scope; see [release readiness](release-readiness-pr8.md) for present checks.
 
 ## Triage method and priorities
 
