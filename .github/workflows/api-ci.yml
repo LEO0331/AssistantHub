@@ -1,0 +1,75 @@
+name: API CI (Express and MySQL)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "api/**"
+      - "docker-compose.yml"
+      - ".github/workflows/api-ci.yml"
+      - "docs/architecture-v2.md"
+      - "docs/api-contract.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_NAME: assistanthub_test
+      DB_USER: assistanthub_test
+      DB_PASSWORD: ci_local_only_password
+      NODE_ENV: test
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci_local_only_root_password
+          MYSQL_DATABASE: assistanthub_test
+          MYSQL_USER: assistanthub_test
+          MYSQL_PASSWORD: ci_local_only_password
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pci_local_only_root_password --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      # Temporary bootstrap for initial PR creation. Remove this step after
+      # committing the npm-generated api/package-lock.json via connected tools.
+      - name: Temporary API lockfile bootstrap
+        working-directory: api
+        run: |
+          if [ ! -f package-lock.json ]; then
+            npm install --package-lock-only --ignore-scripts --no-audit
+            echo API_LOCK_BEGIN
+            base64 -w0 package-lock.json | fold -w1000 | sed 's/^/API_LOCK_CHUNK /'
+            echo API_LOCK_END
+          fi
+
+      - name: Install exact API lockfile
+        run: npm ci --prefix api
+      - name: Validate API JavaScript syntax
+        run: npm run check --prefix api
+      - name: Run migrations twice (idempotence)
+        run: |
+          npm run db:migrate --prefix api
+          npm run db:migrate --prefix api
+      - name: Insert synthetic data twice (idempotence)
+        run: |
+          npm run db:seed --prefix api
+          npm run db:seed --prefix api
+      - name: Test health and database integration
+        run: npm test --prefix api
+      - name: Enforce API production dependency audit
+        run: npm audit --omit=dev --audit-level=high --prefix api
