@@ -1,0 +1,42 @@
+name: Dependency security assessment (report only)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/dependency-security-assessment.mjs'
+      - 'scripts/dependency-security-assessment.check.mjs'
+      - '.github/workflows/dependency-security-assessment.yml'
+      - 'docs/security-dependency-assessment-2026-11-18.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-report:
+    name: Generate dependency audit report (not a security gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Test audit report parser
+        run: node --test scripts/dependency-security-assessment.check.mjs
+
+      - name: Audit all and production-only dependencies
+        run: node scripts/dependency-security-assessment.mjs

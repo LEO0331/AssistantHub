@@ -42,6 +42,10 @@ There is currently no backend. State is client-side only:
 - `localStorage`: shortlist, seed
 - in-memory state: generated talent list, filters, inquiries, UI modal/drawer state
 
+## Dependency security assessment
+
+The [November 18, 2026 dependency assessment](docs/security-dependency-assessment-2026-11-18.md) documents current audit findings and a separate report-only workflow. A successful diagnostic check does **not** certify a clean dependency tree; application CI/security gates are unchanged. The October 5 Dependabot review is historical.
+
 ## Security & Demo Limitations
 - This is a client-only demo: all state can be modified in browser devtools and must not be treated as secure or authoritative.
 - Imported JSON is schema-validated and size-capped, but it is still untrusted demo input; do not use this flow for sensitive data.
