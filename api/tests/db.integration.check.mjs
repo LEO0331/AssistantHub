@@ -19,7 +19,7 @@ test('migrations and deterministic seeds are idempotent on MySQL', async (t) => 
   const pending = await migrator.pending();
   assert.equal(pending.length, 0);
 
-  const { Candidate, Application, User, AuditEvent } = defineModels(db);
+  const { Candidate, Application, User, AuditEvent, IdempotencyRecord } = defineModels(db);
   // Other integration tests may add unique synthetic fixtures concurrently.
   assert.ok(await Candidate.count() >= DEMO_COUNT);
   assert.ok(await Application.count() >= DEMO_COUNT);
@@ -33,6 +33,13 @@ test('migrations and deterministic seeds are idempotent on MySQL', async (t) => 
   assert.ok(auditCols.actor_id);
   assert.ok(auditCols.application_id);
   assert.ok(auditCols.request_id);
+  const idemCols = await db.getQueryInterface().describeTable('idempotency_records');
+  assert.ok(idemCols.actor_id);
+  assert.ok(idemCols.idempotency_key);
+  assert.ok(idemCols.payload_hash);
+  assert.ok(idemCols.response_body);
+  assert.ok(idemCols.expires_at);
+  assert.ok(await IdempotencyRecord.count() >= 0);
 
   // Running seed twice must not create duplicates or overwrite future workflow states.
   await seedDatabase(db);

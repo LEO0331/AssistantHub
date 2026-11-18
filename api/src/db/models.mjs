@@ -44,6 +44,19 @@ export function defineModels(sequelize) {
     occurred_at: { type: DataTypes.DATE, allowNull: false }
   }, { tableName: 'audit_events', timestamps: false });
 
+  const IdempotencyRecord = sequelize.define('IdempotencyRecord', {
+    id: { type: DataTypes.UUID, primaryKey: true, allowNull: false },
+    actor_id: { type: DataTypes.UUID, allowNull: false },
+    idempotency_key: { type: DataTypes.STRING(64), allowNull: false },
+    application_id: { type: DataTypes.UUID, allowNull: false },
+    payload_hash: { type: DataTypes.CHAR(64), allowNull: false },
+    response_body: { type: DataTypes.JSON, allowNull: true },
+    request_id: { type: DataTypes.UUID, allowNull: false },
+    completed_at: { type: DataTypes.DATE, allowNull: true },
+    created_at: { type: DataTypes.DATE, allowNull: false },
+    expires_at: { type: DataTypes.DATE, allowNull: false }
+  }, { tableName: 'idempotency_records', timestamps: false });
+
   Candidate.hasOne(Application, { foreignKey: 'candidate_id' });
   Application.belongsTo(Candidate, { foreignKey: 'candidate_id' });
   Application.hasMany(AuditEvent, { foreignKey: 'application_id' });
@@ -51,5 +64,5 @@ export function defineModels(sequelize) {
   User.hasMany(AuditEvent, { foreignKey: 'actor_id' });
   AuditEvent.belongsTo(User, { foreignKey: 'actor_id' });
 
-  return { User, Candidate, Application, AuditEvent };
+  return { User, Candidate, Application, AuditEvent, IdempotencyRecord };
 }
