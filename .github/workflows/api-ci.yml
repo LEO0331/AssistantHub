@@ -42,18 +42,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      # Temporary bootstrap for initial PR creation. Remove this step after
-      # committing the npm-generated api/package-lock.json via connected tools.
-      - name: Temporary API lockfile bootstrap
-        working-directory: api
-        run: |
-          if [ ! -f package-lock.json ]; then
-            npm install --package-lock-only --ignore-scripts --no-audit
-            echo API_LOCK_BEGIN
-            base64 -w0 package-lock.json | fold -w1000 | sed 's/^/API_LOCK_CHUNK /'
-            echo API_LOCK_END
-          fi
+          cache: npm
+          cache-dependency-path: api/package-lock.json
 
       - name: Install exact API lockfile
         run: npm ci --prefix api
