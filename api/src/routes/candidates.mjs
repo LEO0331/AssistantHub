@@ -39,16 +39,19 @@ function corsFor(origin) {
 }
 
 export function createCandidateRouter({ db, corsOrigin = '' }) {
-  const service = createCandidateService(db);
+  // Initialize models only on candidate requests. Health-check stubs need not
+  // emulate Sequelize; production still uses the real DB and auth boundary.
+  let service;
+  const getService = () => { service ||= createCandidateService(db); return service; };
   const router = Router();
   router.use(corsFor(corsOrigin), noStore);
   router.get('/', requestHandler(async (req, res) => {
     const query = parseCandidateQuery(req.query);
-    return res.status(200).json(await service.list(query));
+    return res.status(200).json(await getService().list(query));
   }));
   router.get('/:id', requestHandler(async (req, res) => {
     const id = parseCandidateId(req.params.id);
-    const candidate = await service.detail(id);
+    const candidate = await getService().detail(id);
     if (!candidate) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Candidate not found' } });
     return res.status(200).json(candidate);
   }));
