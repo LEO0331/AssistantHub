@@ -46,11 +46,11 @@ describe('App logic helpers', () => {
     expect(isRateMatch(999, RATE_FILTERS.ALL)).toBe(true);
   });
 
-  test('getNextStatus cycles through pipeline and resets at end/unknown', () => {
+  test('getNextStatus advances until Hired and resets unknown statuses only', () => {
     expect(getNextStatus(HIRE_STATUSES[0])).toBe(HIRE_STATUSES[1]);
     expect(getNextStatus(HIRE_STATUSES[1])).toBe(HIRE_STATUSES[2]);
     expect(getNextStatus(HIRE_STATUSES[2])).toBe(HIRE_STATUSES[3]);
-    expect(getNextStatus(HIRE_STATUSES[3])).toBe(HIRE_STATUSES[0]);
+    expect(getNextStatus(HIRE_STATUSES[3])).toBe(HIRE_STATUSES[3]);
     expect(getNextStatus('Unknown')).toBe(HIRE_STATUSES[0]);
   });
 

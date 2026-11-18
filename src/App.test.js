@@ -2,7 +2,7 @@
 /* eslint-disable react/display-name */
 /* eslint-disable react/prop-types */
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from './App';
 
@@ -75,35 +75,17 @@ describe('App integration', () => {
     window.history.pushState({}, '', '/');
   });
 
-  test('updates presenter checklist as demo actions are completed', async () => {
+  test('does not show presenter checklist while demo controls remain functional', async () => {
     render(<App />);
-
+    expect(screen.queryByText('Demo Checklist')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Presenter checklist' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Run Demo Scenario'));
     await waitFor(() => {
       expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
     });
-
-    fireEvent.change(screen.getByLabelText('Search assistants by name'), { target: { value: 'exec' } });
-
-    await waitFor(() => {
-      expect(screen.getAllByText('Shortlist').length).toBeGreaterThan(0);
-    });
-    fireEvent.click(screen.getAllByText('Shortlist')[0]);
-    fireEvent.click(screen.getByText('View Shortlist'));
-    fireEvent.click(screen.getByText('Status: New'));
-    fireEvent.click(screen.getByText('Close'));
-
-    fireEvent.click(screen.getAllByText('View Details')[0]);
-    fireEvent.click(screen.getByText('Close'));
-    fireEvent.click(screen.getByText('Export JSON'));
-
-    const checklist = screen.getByRole('region', { name: 'Presenter checklist' });
-    expect(checklist.textContent).toContain('✓ Load 500+');
-    expect(checklist.textContent).toContain('✓ Filter/Search');
-    expect(checklist.textContent).toContain('✓ Shortlist Talent');
-    expect(checklist.textContent).toContain('✓ Move Hire Status');
-    expect(checklist.textContent).toContain('✓ Open Detail Drawer');
-    expect(checklist.textContent).toContain('✓ Export Data');
+    expect(screen.queryByText('Demo Checklist')).not.toBeInTheDocument();
+    expect(screen.getByText('View Shortlist')).toBeInTheDocument();
+    expect(screen.getByText('Export JSON')).toBeInTheDocument();
   });
 
   test('supports deterministic seed control scenarios', async () => {
@@ -217,6 +199,35 @@ describe('App integration', () => {
     fireEvent.click(screen.getByText('Status: New'));
 
     expect(screen.getByText('Status: Contacted')).toBeInTheDocument();
+  });
+
+  test('advances directly from an unshortlisted drawer through Hired and persists state', async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getAllByText('View Details').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('View Details')[0]);
+    const drawer = screen.getByRole('dialog', { name: 'Talent detail drawer' });
+    const advance = within(drawer).getByRole('button', { name: 'Advance Hire Status' });
+    const status = within(drawer).getByText('Hire Status:').parentElement;
+    expect(status).toHaveTextContent('Hire Status: New');
+    expect(advance).toBeEnabled();
+
+    fireEvent.click(advance);
+    expect(status).toHaveTextContent('Hire Status: Contacted');
+    expect(within(drawer).getByRole('button', { name: 'Already Shortlisted' })).toBeInTheDocument();
+    fireEvent.click(advance);
+    expect(status).toHaveTextContent('Hire Status: Interview');
+    fireEvent.click(advance);
+    expect(status).toHaveTextContent('Hire Status: Hired');
+    expect(within(drawer).getByRole('button', { name: 'Hired (Final)' })).toBeDisabled();
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem('talentShortlist') || '[]');
+      expect(stored).toHaveLength(1);
+      expect(stored[0].hireStatus).toBe('Hired');
+    });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByText('View Shortlist'));
+    expect(screen.getByText('Status: Hired')).toBeDisabled();
   });
 
   test('opens and closes talent detail drawer', async () => {

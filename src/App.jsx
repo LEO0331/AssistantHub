@@ -53,8 +53,11 @@ export const isRateMatch = (rate, filter) => {
 
 export const getNextStatus = (currentStatus) => {
   const index = HIRE_STATUSES.indexOf(currentStatus);
-  if (index < 0 || index === HIRE_STATUSES.length - 1) {
+  if (index < 0) {
     return HIRE_STATUSES[0];
+  }
+  if (index === HIRE_STATUSES.length - 1) {
+    return currentStatus;
   }
   return HIRE_STATUSES[index + 1];
 };
@@ -175,7 +178,6 @@ function App() {
   const [controlStatus, setControlStatus] = useState('');
   const [viewMode, setViewMode] = useState('cards');
   const [tableScrollTop, setTableScrollTop] = useState(0);
-  const [demoProgress, setDemoProgress] = useState({ viewedDetail: false, exportedData: false });
   const importInputRef = useRef(null);
   const tableViewportRef = useRef(null);
   const didApplyUrlDemoRef = useRef(false);
@@ -315,34 +317,41 @@ function App() {
     );
   };
 
+  const toShortlistEntry = (assistant) => ({
+    id: assistant.id,
+    name: assistant.name,
+    role: assistant.role,
+    email: assistant.email,
+    phone: assistant.phone,
+    country: assistant.country,
+    hourlyRateUsd: assistant.hourlyRateUsd,
+    hireStatus: HIRE_STATUSES[0],
+  });
+
   const handleAddUser = (assistant) => {
     setShortlistedTalent((previous) => {
       if (previous.some((stored) => stored.id === assistant.id)) {
         return previous;
       }
-
-      return [
-        ...previous,
-        {
-          id: assistant.id,
-          name: assistant.name,
-          role: assistant.role,
-          email: assistant.email,
-          phone: assistant.phone,
-          country: assistant.country,
-          hourlyRateUsd: assistant.hourlyRateUsd,
-          hireStatus: HIRE_STATUSES[0],
-        },
-      ];
+      return [...previous, toShortlistEntry(assistant)];
     });
   };
 
   const handleAdvanceHireStatus = (id) => {
-    setShortlistedTalent((previous) =>
-      previous.map((talent) =>
-        talent.id === id ? { ...talent, hireStatus: getNextStatus(talent.hireStatus || HIRE_STATUSES[0]) } : talent
-      )
-    );
+    setShortlistedTalent((previous) => {
+      if (previous.some((talent) => talent.id === id)) {
+        return previous.map((talent) =>
+          talent.id === id
+            ? { ...talent, hireStatus: getNextStatus(talent.hireStatus || HIRE_STATUSES[0]) }
+            : talent
+        );
+      }
+      // First click also shortlists the candidate, advancing New -> Contacted.
+      const assistant = assistants.find((candidate) => candidate.id === id);
+      return assistant
+        ? [...previous, { ...toShortlistEntry(assistant), hireStatus: getNextStatus(HIRE_STATUSES[0]) }]
+        : previous;
+    });
   };
 
   const getTalentHireStatus = (id) => {
@@ -400,7 +409,6 @@ function App() {
     anchor.click();
     URL.revokeObjectURL(url);
     setJsonStatus('Demo data exported.');
-    setDemoProgress((previous) => ({ ...previous, exportedData: true }));
   };
 
   const handleImportJson = async (event) => {
@@ -444,7 +452,6 @@ function App() {
     setPageSize(DEFAULT_PAGE_SIZE);
     setViewMode('cards');
     setTableScrollTop(0);
-    setDemoProgress({ viewedDetail: false, exportedData: false });
     setJsonStatus('Demo data reset to defaults.');
     setControlStatus('');
     dispatchUi({ type: 'resetFilters' });
@@ -460,7 +467,6 @@ function App() {
     setPageSize(DEFAULT_PAGE_SIZE);
     setViewMode('cards');
     setTableScrollTop(0);
-    setDemoProgress({ viewedDetail: false, exportedData: false });
     dispatchUi({ type: 'resetFilters' });
     setControlStatus(
       fromUrl
@@ -711,53 +717,6 @@ function App() {
         </section>
 
         <section className="cards-section" aria-label="Talent profiles">
-          <section className="demo-checklist" aria-label="Presenter checklist">
-            <p className="chip-label">Demo Checklist</p>
-            <div className="checklist-row">
-              <span className={numberOfCards >= DEMO_SCENARIO_COUNT ? 'done' : ''}>
-                {numberOfCards >= DEMO_SCENARIO_COUNT ? '✓' : '○'} Load 500+
-              </span>
-              <span
-                className={
-                  uiState.searchTerm.trim() ||
-                  uiState.selectedRole !== 'all' ||
-                  uiState.selectedAvailability !== 'all' ||
-                  uiState.selectedRate !== RATE_FILTERS.ALL
-                    ? 'done'
-                    : ''
-                }
-              >
-                {uiState.searchTerm.trim() ||
-                uiState.selectedRole !== 'all' ||
-                uiState.selectedAvailability !== 'all' ||
-                uiState.selectedRate !== RATE_FILTERS.ALL
-                  ? '✓'
-                  : '○'}{' '}
-                Filter/Search
-              </span>
-              <span className={shortlistedTalent.length > 0 ? 'done' : ''}>
-                {shortlistedTalent.length > 0 ? '✓' : '○'} Shortlist Talent
-              </span>
-              <span
-                className={
-                  shortlistedTalent.some((talent) => (talent.hireStatus || HIRE_STATUSES[0]) !== HIRE_STATUSES[0])
-                    ? 'done'
-                    : ''
-                }
-              >
-                {shortlistedTalent.some((talent) => (talent.hireStatus || HIRE_STATUSES[0]) !== HIRE_STATUSES[0])
-                  ? '✓'
-                  : '○'}{' '}
-                Move Hire Status
-              </span>
-              <span className={demoProgress.viewedDetail ? 'done' : ''}>
-                {demoProgress.viewedDetail ? '✓' : '○'} Open Detail Drawer
-              </span>
-              <span className={demoProgress.exportedData ? 'done' : ''}>
-                {demoProgress.exportedData ? '✓' : '○'} Export Data
-              </span>
-            </div>
-          </section>
           {!uiState.isLoading && visibleAssistants.length > 0 && (
             <div className="result-summary">
               {viewMode === 'cards'
@@ -778,7 +737,6 @@ function App() {
                     onAddClick={() => handleAddUser(assistant)}
                     onViewDetails={() => {
                       dispatchUi({ type: 'openDrawer', payload: assistant.id });
-                      setDemoProgress((previous) => ({ ...previous, viewedDetail: true }));
                     }}
                     isAdded={shortlistedTalent.some((user) => user.id === assistant.id)}
                     hireStatus={getTalentHireStatus(assistant.id)}
@@ -842,7 +800,6 @@ function App() {
                                 className="ui-button secondary small"
                                 onClick={() => {
                                   dispatchUi({ type: 'openDrawer', payload: assistant.id });
-                                  setDemoProgress((previous) => ({ ...previous, viewedDetail: true }));
                                 }}
                               >
                                 Detail
@@ -978,9 +935,12 @@ function App() {
               <button
                 className="ui-button dark"
                 onClick={() => handleAdvanceHireStatus(selectedTalent.id)}
-                disabled={!shortlistedTalent.some((talent) => talent.id === selectedTalent.id)}
+                disabled={getTalentHireStatus(selectedTalent.id) === 'Hired'}
+                title={!shortlistedTalent.some((talent) => talent.id === selectedTalent.id)
+                  ? 'Also adds this candidate to your shortlist'
+                  : undefined}
               >
-                Advance Hire Status
+                {getTalentHireStatus(selectedTalent.id) === 'Hired' ? 'Hired (Final)' : 'Advance Hire Status'}
               </button>
               <button className="ui-button secondary" onClick={() => dispatchUi({ type: 'closeDrawer' })}>
                 Close
@@ -1002,7 +962,13 @@ function App() {
                     <p>
                       {user.name} ({user.role}) - {user.email}, {user.phone}, {user.country}, ${user.hourlyRateUsd}/hr
                     </p>
-                    <button className="ui-button secondary small" onClick={() => handleAdvanceHireStatus(user.id)}>
+                    <button
+                      type="button"
+                      className="ui-button secondary small"
+                      onClick={() => handleAdvanceHireStatus(user.id)}
+                      disabled={(user.hireStatus || HIRE_STATUSES[0]) === 'Hired'}
+                      title={(user.hireStatus || HIRE_STATUSES[0]) === 'Hired' ? 'Final hire status' : 'Advance hire status'}
+                    >
                       Status: {user.hireStatus || HIRE_STATUSES[0]}
                     </button>
                   </div>
