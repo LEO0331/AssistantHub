@@ -1,5 +1,6 @@
 // Only the exported CSV copy is neutralized; original shortlist values remain
 // unchanged for on-screen display and JSON round trips.
+// eslint-disable-next-line no-control-regex -- Must detect control-prefixed spreadsheet formulas.
 const SPREADSHEET_FORMULA = /^[\u0000-\u0020\u007f\u00a0\u1680\u2000-\u200f\u2028\u2029\u202f\u205f\u2060\u3000\ufeff]*[=+\-@]/u;
 const CSV_FIELDS = Object.freeze([
   'id', 'name', 'role', 'email', 'phone', 'country', 'hourlyRateUsd', 'hireStatus'

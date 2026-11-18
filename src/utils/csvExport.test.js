@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { escapeSpreadsheetCell, safeShortlistCsvRows } from './csvExport';
 
 describe('CSV spreadsheet-formula injection defense', () => {
