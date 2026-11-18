@@ -59,10 +59,10 @@ describe('candidate API adapter', () => {
     await expect(fetchCandidatePage({ baseUrl: 'https://api.example.com', accessToken: 'test_token_long_enough_for_adapter', fetchImpl }))
       .rejects.toThrow(/invalid response/);
     fetchImpl.mockRejectedValueOnce(new Error('password=secret'));
-    await expect(fetchCandidatePage({ baseUrl: 'https://api.example.com', fetchImpl }))
+    await expect(fetchCandidatePage({ baseUrl: 'https://api.example.com', accessToken: 'test_token_long_enough_for_adapter', fetchImpl }))
       .rejects.toThrow(/could not be reached/);
     fetchImpl.mockRejectedValueOnce(Object.assign(new Error('cancelled'), { name: 'AbortError' }));
-    await expect(fetchCandidatePage({ baseUrl: 'https://api.example.com', fetchImpl }))
+    await expect(fetchCandidatePage({ baseUrl: 'https://api.example.com', accessToken: 'test_token_long_enough_for_adapter', fetchImpl }))
       .rejects.toMatchObject({ name: 'AbortError' });
   });
 

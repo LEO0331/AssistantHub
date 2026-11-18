@@ -21,10 +21,11 @@ const session = {
 };
 
 async function login() {
+  const previousCalls = loginCandidateApi.mock.calls.length;
   fireEvent.change(screen.getByLabelText('API email'), { target: { value: 'viewer@example.test' } });
   fireEvent.change(screen.getByLabelText('API password'), { target: { value: 'test-only-secret' } });
   fireEvent.click(screen.getByText('Sign in to API'));
-  await waitFor(() => expect(loginCandidateApi).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(loginCandidateApi).toHaveBeenCalledTimes(previousCalls + 1));
 }
 
 describe('read-only API candidate browser with authentication', () => {
