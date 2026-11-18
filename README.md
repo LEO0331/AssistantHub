@@ -29,6 +29,10 @@ Existing `local` and `mock-api` data sources remain browser simulations (the lat
 - Large-volume demo support: `Load 500/2000/5000`, virtualized list mode, pagination.
 - Chatbot helper + map modal + contact inquiry flow.
 
+## AssistantHub 2.0 backend foundation
+
+The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records, and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed or connected to React**. Existing GitHub Pages and local/mock-api flows are unchanged. Authentication, candidate retrieval, RBAC, workflow transitions and audit endpoints are future PRs. See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
+
 ## Tech Stack
 - React 18
 - Vite 8 for development and production builds

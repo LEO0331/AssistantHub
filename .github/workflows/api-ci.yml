@@ -42,8 +42,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: api/package-lock.json
 
       # Temporary bootstrap for initial PR creation. Remove this step after
       # committing the npm-generated api/package-lock.json via connected tools.
