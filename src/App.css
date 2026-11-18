@@ -275,10 +275,6 @@
   z-index: 1;
 }
 
-.talent-table tbody tr:not(.virtual-spacer) {
-  height: 72px;
-}
-
 .table-cell-text {
   display: -webkit-box;
   -webkit-box-orient: vertical;

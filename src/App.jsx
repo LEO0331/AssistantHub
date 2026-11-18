@@ -788,7 +788,7 @@ function App() {
                         </tr>
                       )}
                       {tableVirtualRows.items.map((assistant) => (
-                        <tr key={assistant.id}>
+                        <tr key={assistant.id} style={{ height: `${TABLE_ROW_HEIGHT}px` }}>
                           <td><span className="table-cell-text" title={assistant.name}>{assistant.name}</span></td>
                           <td><span className="table-cell-text" title={assistant.role}>{assistant.role}</span></td>
                           <td><span className="table-cell-text" title={assistant.availability}>{assistant.availability}</span></td>

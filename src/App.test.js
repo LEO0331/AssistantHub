@@ -238,6 +238,7 @@ describe('App integration', () => {
     const rows = within(table).getAllByRole('row');
     expect(rows).toHaveLength(7); // header + six data rows; no duplicate table header
     const first = rows[1];
+    expect(first).toHaveStyle({ height: '72px' });
     expect(within(first).getAllByRole('cell')).toHaveLength(7);
     const actions = within(first).getByRole('group', { name: /^Actions for / });
     expect(actions.parentElement.tagName).toBe('TD');
