@@ -8,6 +8,25 @@ export const HIRING_TRANSITIONS = Object.freeze({
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+
+export function createIdempotencyKey(cryptoSource = globalThis.crypto) {
+  // Secure browser RNG only; never Math.random or a predictable fallback.
+  if (!cryptoSource || typeof cryptoSource.getRandomValues !== 'function') {
+    throw new Error('Secure random key generation is unavailable in this browser.');
+  }
+  const bytes = new Uint8Array(16);
+  cryptoSource.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
+  return [
+    hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16),
+    hex.slice(16, 20), hex.slice(20)
+  ].join('-');
+}
+
+const VALID_KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export class WorkflowApiError extends Error {
   constructor(status, message) {
     super(message);
@@ -46,12 +65,14 @@ function errorFromStatus(status) {
   if (status === 403) return new WorkflowApiError(403, 'Your role does not allow this action. Sign in again if your access changed.');
   if (status === 404) return new WorkflowApiError(404, 'The requested candidate application was not found.');
   if (status === 409) return new WorkflowApiError(409, 'Another user updated this application. Refresh server state before deciding what to do next.');
+  if (status === 428) return new WorkflowApiError(428, 'A valid Idempotency-Key was not supplied. The request was not applied.');
   if (status === 422) return new WorkflowApiError(422, 'This status transition is no longer permitted. Refresh server state.');
   if (status === 400) return new WorkflowApiError(400, 'The workflow request was rejected. Review the selected status and reason.');
   return new WorkflowApiError(status, 'Hiring workflow API is currently unavailable. Refresh server state before retrying.');
 }
 
-async function workflowRequest({ baseUrl, path, accessToken, method = 'GET', body, signal, fetchImpl = fetch }) {
+async function workflowRequest({ baseUrl, path, accessToken, method = 'GET', body, idempotencyKey,
+  signal, fetchImpl = fetch }) {
   if (!baseUrl) throw new Error('Hiring workflow API is not configured.');
   if (typeof accessToken !== 'string' || accessToken.length < 10 || accessToken.length > 8192) {
     throw new WorkflowApiError(401, 'Sign in to access hiring workflow data.');
@@ -63,7 +84,8 @@ async function workflowRequest({ baseUrl, path, accessToken, method = 'GET', bod
       headers: {
         Accept: 'application/json',
         Authorization: 'Bearer ' + accessToken,
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {})
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {})
       },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
       credentials: 'omit',
@@ -75,7 +97,20 @@ async function workflowRequest({ baseUrl, path, accessToken, method = 'GET', bod
     if (error?.name === 'AbortError') throw error;
     throw new WorkflowApiError(null, 'Cannot confirm the server outcome. Refresh application state and audit history before any retry.');
   }
-  if (!response.ok) throw errorFromStatus(response.status);
+  if (!response.ok) {
+    if (response.status === 409) {
+      // Read only a known error code; never show untrusted server bodies.
+      try {
+        const body = await response.json();
+        if (body?.error?.code === 'IDEMPOTENCY_KEY_REUSED') {
+          throw new WorkflowApiError(409, 'This idempotency key was used for different request data. Refresh server state.');
+        }
+      } catch (error) {
+        if (error instanceof WorkflowApiError) throw error;
+      }
+    }
+    throw errorFromStatus(response.status);
+  }
   let data;
   try { data = await response.json(); }
   catch { throw new WorkflowApiError(null, 'Hiring workflow API returned invalid JSON. Refresh server state.'); }
@@ -119,8 +154,11 @@ export async function fetchApplicationAudit({ baseUrl, applicationId, accessToke
 }
 
 export async function postApplicationTransition({ baseUrl, applicationId, accessToken,
-  toStatus, expectedVersion, reason = '', signal, fetchImpl }) {
+  toStatus, expectedVersion, reason = '', idempotencyKey, signal, fetchImpl }) {
   assertUuid(applicationId, 'application ID');
+  if (!VALID_KEY.test(idempotencyKey || '')) {
+    throw new Error('A fresh UUID-v4 idempotency key is required for every new transition.');
+  }
   if (!Object.values(HIRING_TRANSITIONS).some(values => values.includes(toStatus)) ||
     !Number.isSafeInteger(expectedVersion) || expectedVersion < 1 ||
     expectedVersion > 4294967294 || typeof reason !== 'string' ||
@@ -134,7 +172,7 @@ export async function postApplicationTransition({ baseUrl, applicationId, access
     baseUrl,
     path: '/api/applications/' + encodeURIComponent(applicationId) + '/transitions',
     accessToken, method: 'POST', body: { toStatus, expectedVersion, reason: reason.trim() },
-    signal, fetchImpl
+    idempotencyKey, signal, fetchImpl
   });
   if (!response || !validApplication(response.application) ||
     response.application.id !== applicationId ||
@@ -143,5 +181,5 @@ export async function postApplicationTransition({ baseUrl, applicationId, access
     !UUID.test(response.auditEventId)) {
     throw new WorkflowApiError(null, 'Cannot verify the transition response. Refresh server state before retrying.');
   }
-  return response;
+  return { ...response, replayed: response?.replayed || false };
 }
