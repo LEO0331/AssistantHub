@@ -1,4 +1,4 @@
-# AssistantHub API foundation (PR #2 + read-only discovery in PR #3)
+# AssistantHub API foundation (PR #2–#4)
 
 This is an **isolated, not-yet-deployed backend**. React and GitHub Pages continue using their existing local/mock-api sources. The implemented endpoints are:
 
@@ -7,7 +7,7 @@ This is an **isolated, not-yet-deployed backend**. React and GitHub Pages contin
 - GET /api/candidates: synthetic candidate list with server query `q` (name/role/skills), `role`, `availability`, `rate` (all/under40/40to60/over60), `sort` (nameAsc/rateAsc/rateDesc), `page` (1–1000), `pageSize` (1–96); returns { items, page, pageSize, total }.
 - GET /api/candidates/:id: minimal synthetic candidate detail by UUID; 400 for malformed IDs, 404 for missing records.
 
-Candidate discovery is temporarily **unauthenticated and restricted to synthetic-only fields**. Authentication, application transition, and audit-read endpoints are not implemented yet. Do not expose this unfinished service publicly or connect a production frontend to it.
+Candidate discovery is **protected by Bearer JWT with server-validated RBAC** and returns synthetic-only fields. POST /api/auth/login exchanges operator-provisioned credentials for a 15-minute access token; GET /api/auth/me returns the authenticated identity; GET /api/admin/users/summary is admin-only and returns aggregate counts. Application transitions and audit-read endpoints remain unimplemented. Do not expose this unfinished service publicly or use real candidate data.
 
 ## Local setup (Node 20.19+ / 22.12+, Docker)
 
@@ -30,7 +30,7 @@ Example Unix/macOS shell for the commands in steps 4–6:
     npm run db:seed --prefix api
     npm start --prefix api
 
-Set `API_CORS_ORIGIN=http://127.0.0.1:3000` for the local frontend origin; other browser origins get no CORS access. Run Vite with `VITE_ASSISTANTHUB_API_BASE_URL=http://127.0.0.1:3100` to enable the optional read-only browser; do not put passwords or tokens in Vite variables. Use only the synthetic seed; no actual candidate PII is returned.
+Set `API_CORS_ORIGIN=http://127.0.0.1:3000` for the local frontend origin; other browser origins get no CORS access. Also set `AUTH_JWT_SECRET` to a unique, random 32+ byte value (never commit or expose it). Run `npm run user:provision --prefix api` with `BOOTSTRAP_USER_EMAIL`, `BOOTSTRAP_USER_ROLE` and `BOOTSTRAP_USER_PASSWORD` in your *private* environment to provision a user; no default login is seeded. See [security-auth-pr4.md](../docs/security-auth-pr4.md) for the full safe workflow. Run Vite with `VITE_ASSISTANTHUB_API_BASE_URL=http://127.0.0.1:3100` to enable the optional read-only browser; do not put passwords or tokens in Vite variables. Use only the synthetic seed; no actual candidate PII is returned.
 
 To run database-backed tests locally (use only a disposable database), set NODE_ENV=test and run npm test --prefix api. The GitHub Actions api-ci.yml job provisions isolated MySQL and runs migration twice, seed twice, 4 health tests and a DB integration test, plus a **blocking production-only high-severity npm audit** and a separately labeled report of all dependency findings. `umzug` currently retains a **dev-tooling** transitive `picomatch` finding (GHSA-fc5q-39xc-vjpf) without a verified patched upstream version; Sequelize's `uuid` transitive advisory is also tracked. Neither is claimed as resolved.
 
@@ -45,4 +45,4 @@ To run database-backed tests locally (use only a disposable database), set NODE_
 - API database credentials are required through environment variables; no default production password. Docker Compose passwords are clearly local-only and must not be reused outside a developer machine.
 - A green /ready response tests connectivity, not that all schema migrations were applied. Run migrations as a separate deployment step.
 
-The design proposal remains in ../docs/architecture-v2.md and ../docs/api-contract.md. Candidate discovery is included in PR #3; add login/RBAC in PR #4, transaction-safe workflow/audit writes in PR #5, React integration in PR #6.
+The design proposal remains in ../docs/architecture-v2.md and ../docs/api-contract.md. Candidate discovery was added in PR #3 and JWT login/RBAC in PR #4; add transaction-safe workflow/audit writes in PR #5 and secure hiring UI integration in PR #6.

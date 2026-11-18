@@ -1,6 +1,6 @@
 # AssistantHub 2.0 — proposed architecture
 
-> PR #1 proposed the architecture. PR #2 adds an isolated Express/MySQL foundation. PR #3 adds read-only synthetic candidate list/detail endpoints and an optional, separately configured server-paginated React browser. Default GitHub Pages remains an offline demo; the backend is not deployed. No authentication, authorization, hiring transitions, or durable audit-write/read API is implemented yet.
+> PR #1 proposed the architecture. PR #2 adds an isolated Express/MySQL foundation. PR #3 adds read-only synthetic candidate list/detail endpoints and an optional, separately configured server-paginated React browser. PR #4 adds scrypt password verification, short-lived JWTs, current-database-role RBAC, operator-only provisioning, and in-memory frontend authentication. Default GitHub Pages remains an offline demo; the backend is not deployed. Authentication and candidate RBAC are implemented in PR #4; hiring transitions and durable audit-write/read API remain unimplemented.
 
 ## 1. Purpose and boundaries
 

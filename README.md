@@ -15,7 +15,8 @@ An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The p
 - PR #1: documentation and nonfunctional configuration cleanup only.
 - PR #2: isolated Express/MySQL foundation (complete).
 - PR #3: read-only synthetic candidate API, server search/paging and optional frontend browser.
-- PRs #4–#5: authentication/authorization, then transactional workflow and audit.
+- PR #4: JWT login, server-enforced RBAC, rate-limited authentication and in-memory API browser session.
+- PR #5: transactional hiring workflow and durable audit.
 - PR #6: integrate the real API workflow into React; first functional MVP.
 - PRs #7–#8: idempotency/failure handling and isolated public demo hardening.
 
@@ -33,7 +34,7 @@ Existing `local` and `mock-api` data sources remain browser simulations (the lat
 
 ## AssistantHub 2.0 backend foundation
 
-The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The new optional read-only API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication, RBAC, workflow transitions and audit endpoints are future PRs. See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
+The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The new optional read-only API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication and role-protected candidate reads are included in PR #4. Hiring transitions and audit history remain future PRs. See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
 
 ## Tech Stack
 - React 18
@@ -60,12 +61,12 @@ Start the [API foundation](api/README.md), migrate and seed the local MySQL data
 VITE_ASSISTANTHUB_API_BASE_URL=http://127.0.0.1:3100 npm start
 ```
 
-In the Data source selector choose **Real MySQL API (read-only)**. This mode performs **server-side** name/role/skills search, availability/rate filters, stable sorting and bounded pagination, with request cancellation and explicit failure/retry states. If the origin is unset, the API option is disabled; the existing demo remains offline. No frontend credentials are sent, no real personal data is served, and no persistence is claimed for local shortlist/hiring actions. The backend is not publicly deployed; do not expose unauthenticated endpoints with real candidate records. `API_CORS_ORIGIN` must be set to the precise frontend origin in the backend environment.
+In the Data source selector choose **Real MySQL API (read-only)**. This mode performs **server-side** name/role/skills search, availability/rate filters, stable sorting and bounded pagination, with request cancellation and explicit failure/retry states. If the origin is unset, the API option is disabled; the existing demo remains offline. The API browser now signs in with an operator-provisioned account and sends a short-lived JWT in Authorization headers. The token stays only in React memory. No real personal data is served, and local shortlist/hiring actions are not persisted to MySQL. The backend is not publicly deployed; do not expose unauthenticated endpoints with real candidate records. `API_CORS_ORIGIN` must be set to the precise frontend origin in the backend environment.
 
 ## Security & Demo Limitations
 - This is a client-only demo: all state can be modified in browser devtools and must not be treated as secure or authoritative.
 - Imported JSON is schema-validated and size-capped, but it is still untrusted demo input; do not use this flow for sensitive data.
-- No authentication/authorization is implemented; anyone with browser access can operate all UI actions.
+- The offline/local/mock demo still has no authorization (its browser state is editable). The separate API browser requires login and server-side RBAC from PR #4.
 - No server-side audit trail exists; hire-status transitions are local only.
 - Virtualized and paginated rendering supports large demo pools, but browser memory/CPU still set the practical upper bound.
 
