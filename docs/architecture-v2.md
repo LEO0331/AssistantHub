@@ -1,6 +1,6 @@
 # AssistantHub 2.0 — proposed architecture
 
-> PR #1 proposed the architecture. PR #2 adds an isolated Express/MySQL foundation. PR #3 adds read-only synthetic candidate list/detail endpoints and an optional, separately configured server-paginated React browser. PR #4 adds scrypt password verification, short-lived JWTs, current-database-role RBAC, operator-only provisioning, and in-memory frontend authentication. Default GitHub Pages remains an offline demo; the backend is not deployed. Authentication and candidate RBAC were implemented in PR #4; PR #5 implements transactional hiring status changes and audit-read APIs on MySQL. PR #6 connects authenticated server-authoritative hiring controls, version-conflict recovery and paginated audit history to the React API browser. The backend is still not publicly deployed.
+> PR #1 proposed the architecture. PR #2 adds an isolated Express/MySQL foundation. PR #3 adds read-only synthetic candidate list/detail endpoints and an optional, separately configured server-paginated React browser. PR #4 adds scrypt password verification, short-lived JWTs, current-database-role RBAC, operator-only provisioning, and in-memory frontend authentication. Default GitHub Pages remains an offline demo; the backend is not deployed. Authentication and candidate RBAC were implemented in PR #4; PR #5 implements transactional hiring status changes and audit-read APIs on MySQL. PR #6 connects authenticated server-authoritative hiring controls, version-conflict recovery and paginated audit history to the React API browser. PR #8 explicitly enforces loopback-only backend exposure. GitHub Pages remains public but offline-only; production backend deployment is **not authorized**.
 
 ## 1. Purpose and boundaries
 
@@ -105,7 +105,7 @@ Two recruiters read application version 7 at Interview. Recruiter A requests Hir
 5. PR #5: implement transactional state transitions and audit read API (completed in local backend, real-MySQL tests).
 6. PR #6: integrate workflow controls and audit timeline into React; no duplicate browser business authority in API mode (implemented in local full-stack MVP).
 7. PR #7: implement durable idempotency, explicit same-key replay, structured request logs, retention and real-MySQL failure tests (completed in local MVP).
-8. PR #8: tighten security gates, public isolated demo, deployment operations and interview guide.
+8. PR #8: tighten action SHA pins, CI audit/Pages artifact gates, API response headers and loopback-only listener, and document deployment GO/NO-GO. Public API demo is **NO-GO**, not shipped.
 
 Only PR #6 is the functional MVP. A passed docs-only PR #1 must not be represented as a working backend or security implementation.
 

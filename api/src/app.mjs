@@ -14,6 +14,18 @@ export function createApp({ db, corsOrigin = '', jwtSecret, loginLimiter, reques
   }
   const app = express();
   app.disable('x-powered-by');
+  // Security/cache policy precedes JSON parsing so even malformed/oversized
+  // request errors receive no-store and fail-closed browser policy headers.
+  app.use('/api', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('X-Frame-Options', 'DENY');
+    res.set('Referrer-Policy', 'no-referrer');
+    res.set('Content-Security-Policy',
+      "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+    res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
   app.use(createRequestObserver({ logger: requestLogger || (event => {
     if (process.env.NODE_ENV !== 'test') console.info(JSON.stringify(event));
   }) }));

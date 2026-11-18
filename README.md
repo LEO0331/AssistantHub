@@ -19,7 +19,7 @@ An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The p
 - PR #5: transactional hiring workflow and durable MySQL audit (API-only).
 - PR #6: connect authenticated hiring status controls and audit timeline to React (first local full-stack MVP).
 - PR #7: persistent actor-scoped idempotency, same-key safe replay, request IDs, structured logs and bounded retention (implemented).
-- PR #8: final CI/security hardening and documented deployment decisions (future).
+- PR #8: local API security headers and binding guard, pinned CI actions, offline Pages artifact gate, Dependabot and explicit release criteria (implemented in PR #30).
 
 Existing `local` and `mock-api` data sources remain browser simulations (the latter is a timer, **not** an HTTP API). The GitHub Pages base path `/AssistantHub/`, output directory `build/`, CI and deployment behavior are unchanged by PR #1. Do not use synthetic profile/contact data as real hiring information.
 
@@ -49,6 +49,10 @@ The repository also contains an **isolated API foundation** in [api/](api/README
 The existing offline demo retains client-side state; API mode reads a separate local MySQL backend only when configured:
 - `localStorage`: shortlist, seed
 - in-memory state: generated talent list, filters, inquiries, UI modal/drawer state
+
+## Release readiness and secure CI
+
+The [PR #8 release and security decision](docs/release-readiness-pr8.md) distinguishes the **public offline GitHub Pages demo (allowed after review)** from the **local authenticated MySQL API (not approved for public hosting)**. API_HOST is loopback-only. CI validates dependency production high/critical gates, pinned GitHub Action commits, least-privilege workflows and the compiled Pages artifact. Root/npm, API/npm and Actions Dependabot updates are now scheduled weekly; warnings are reviewed, not auto-dismissed. To check a local production bundle, run `VITE_ASSISTANTHUB_API_BASE_URL="" npm run build && npm run test:release`.
 
 ## Dependency security assessment
 
@@ -81,6 +85,7 @@ Workflow demo: sign in, select a candidate, choose **View hiring workflow**, ins
 - `npm run test:coverage`: run tests with coverage
 - `npm run test:ci`: CI test mode (`coverage + no watch`)
 - `npm run test:tooling`: integration checks for dev-server protections and built asset paths (run after build)
+- `npm run test:release`: checks workflow supply-chain pins/least privilege and rejects unsafe or API-enabled Pages artifacts (run after building offline)
 - `npm run lint`: lint source files
 
 ## Run Locally
@@ -97,8 +102,8 @@ The browser target is Vite's modern-browser baseline; CRA's Browserslist setting
 and OpenSSL legacy-provider workaround are no longer used.
 
 ## CI/CD
-- Pull requests run [CI](https://github.com/LEO0331/AssistantHub/actions/workflows/ci.yml) for lint, coverage tests, build, and tooling checks.
-- Pushes to `main` run [Deploy AssistantHub](https://github.com/LEO0331/AssistantHub/actions/workflows/deploy.yml): lint, tests, Vite build, and tooling checks precede uploading `build/` as an official GitHub Pages artifact.
+- Pull requests run [CI](https://github.com/LEO0331/AssistantHub/actions/workflows/ci.yml) for lint, coverage, build, tooling, **blocking production high/critical dependency audit** and offline artifact/supply-chain policy checks.
+- Pushes to `main` run [Deploy AssistantHub](https://github.com/LEO0331/AssistantHub/actions/workflows/deploy.yml): lint, tests, Vite build, tooling, audit and **offline release guard** precede uploading `build/` as an official GitHub Pages artifact. API URL is explicitly disabled in the public build.
 - A separate deployment job uses `actions/deploy-pages` to publish the artifact to the `github-pages` environment. It requires `pages: write` and `id-token: write`; the build job only needs read access. No generated-site commits or `gh-pages` branch are needed after the Pages source is migrated.
 - The Vite base path remains `/AssistantHub/`, with the public URL at https://leo0331.github.io/AssistantHub/.
 

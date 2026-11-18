@@ -1,6 +1,6 @@
 # AssistantHub 2.0 — proposed REST API contract
 
-> **Partly implemented through PR #3:** The isolated backend now has GET /api/health/live, GET /api/health/ready, GET /api/candidates, and GET /api/candidates/:id for **synthetic-only, read-only discovery**. Authentication, application transitions and audit history are implemented in the **local API** through PR #5, and an authenticated React workflow panel is connected in PR #6. PR #7 now adds durable, actor-scoped idempotency and sanitized request correlation logging. Production backend deployment and real applicant data remain **out of scope**. Existing local/mock-api simulations still work.
+> **Partly implemented through PR #3:** The isolated backend now has GET /api/health/live, GET /api/health/ready, GET /api/candidates, and GET /api/candidates/:id for **synthetic-only, read-only discovery**. Authentication, application transitions and audit history are implemented in the **local API** through PR #5, and an authenticated React workflow panel is connected in PR #6. PR #7 now adds durable, actor-scoped idempotency and sanitized request correlation logging. PR #8 further requires a loopback API listener, API security headers, and offline-only Pages release validation. Production backend deployment and real applicant data remain **out of scope**. Existing local/mock-api simulations still work.
 
 ## 1. Protocol and conventions
 

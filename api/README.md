@@ -1,6 +1,6 @@
-# AssistantHub API foundation (PR #2–#7)
+# AssistantHub API foundation (PR #2–#8)
 
-This is an **isolated, not-yet-deployed backend**. React and GitHub Pages continue using their existing local/mock-api sources. The implemented endpoints are:
+This is an **isolated, not-yet-deployed backend**. PR #8 enforces loopback-only `API_HOST` (127.0.0.1, ::1 or localhost) and adds API-wide no-store, nosniff, frame-deny, no-referrer, deny-by-default JSON CSP and Permissions-Policy response headers, including error responses. **Public API hosting is blocked pending a separate reviewed architecture.** React and GitHub Pages continue using their existing local/mock-api sources. The implemented endpoints are:
 
 - GET /api/health/live: 200 { "status": "ok" } even when DB is unavailable.
 - GET /api/health/ready: 200 when MySQL responds, otherwise 503 { "status": "unavailable" }.
@@ -23,7 +23,7 @@ From the repository root:
 2. Copy api/.env.example to api/.env; local-only example credentials must never be used for real deployments.
 3. Run commands below from the root, using the values in api/.env as your environment. Node supports --env-file, but npm does not automatically load api/.env.
 4. Run npm ci --prefix api.
-5. Run npm run db:migrate --prefix api and npm run db:seed --prefix api (both are safe to repeat on the same healthy schema).
+5. Run npm run db:migrate --prefix api and npm run db:seed --prefix api (both are safe to repeat on the same healthy schema). Do not expose MySQL or API to non-loopback clients.
 6. Run npm start --prefix api and open http://127.0.0.1:3100/api/health/live and /api/health/ready.
 
 Example Unix/macOS shell for the commands in steps 4–6:
@@ -40,7 +40,7 @@ Set `API_CORS_ORIGIN=http://127.0.0.1:3000` for the local frontend origin; other
 
 Run `npm run db:prune-idempotency --prefix api` only as an operator-approved manual retention cleanup for expired completed records (max 500 per invocation), after a backup/retention review. See [PR #7 retention policy](../docs/idempotency-pr7.md).
 
-To run database-backed tests locally (use only a disposable database), set NODE_ENV=test and run npm test --prefix api. The GitHub Actions api-ci.yml job provisions isolated MySQL and runs migration twice, seed twice, 4 health tests and a DB integration test, plus a **blocking production-only high-severity npm audit** and a separately labeled report of all dependency findings. `umzug` currently retains a **dev-tooling** transitive `picomatch` finding (GHSA-fc5q-39xc-vjpf) without a verified patched upstream version; Sequelize's `uuid` transitive advisory is also tracked. Neither is claimed as resolved.
+To run database-backed tests locally (use only a disposable database), set NODE_ENV=test and run npm test --prefix api. The GitHub Actions api-ci.yml job provisions isolated MySQL and runs migration twice, seed twice, authentication and HTTP security-header tests, real concurrent/idempotency tests and a DB integration test, plus a **blocking production-only high-severity npm audit** and a separately labeled report of all dependency findings. `umzug` currently retains a **dev-tooling** transitive `picomatch` finding (GHSA-fc5q-39xc-vjpf) without a verified patched upstream version; Sequelize's `uuid` transitive advisory is also tracked. Neither is claimed as resolved.
 
 ## Schema and seed policy
 
@@ -51,6 +51,6 @@ To run database-backed tests locally (use only a disposable database), set NODE_
 - **MySQL DDL is not transactionally atomic across tables.** An interrupted fresh migration may leave a partial schema even without a SequelizeMeta entry; investigate and restore backup (production) or recreate a disposable database (development) before retrying.
 - Synthetic seed inserts 36 stable records and 36 New applications, with no real personal data or test users/passwords. It uses findOrCreate rather than overwriting an existing hiring state.
 - API database credentials are required through environment variables; no default production password. Docker Compose passwords are clearly local-only and must not be reused outside a developer machine.
-- A green /ready response tests connectivity, not that all schema migrations were applied. Run migrations as a separate deployment step.
+- A green /ready response tests connectivity, not that all schema migrations were applied. Run migrations as a separate deployment step. See the [PR #8 no-public-backend deployment decision](../docs/release-readiness-pr8.md) for security prerequisites, release gates and rollback.
 
 The design proposal remains in ../docs/architecture-v2.md and ../docs/api-contract.md. Candidate discovery was added in PR #3, JWT login/RBAC in PR #4, and transactional workflow/audit APIs in PR #5. PR #6 connects the secure hiring UI; PR #7 adds persistent idempotency, safe response replay, sanitized request logging, and seven-day manual retention cleanup. [PR #7 contract and recovery](../docs/idempotency-pr7.md).

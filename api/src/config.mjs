@@ -40,8 +40,14 @@ export function serverConfig(env = process.env) {
     }
   }
   validateJwtSecret(env.AUTH_JWT_SECRET);
+  const host = env.API_HOST || '127.0.0.1';
+  // PR #8 release policy: this backend is not a public multi-tenant service.
+  // Explicitly reject accidental 0.0.0.0 / container / public bindings.
+  if (!['127.0.0.1', '::1', 'localhost'].includes(host)) {
+    throw new Error('API_HOST must be loopback; public backend deployment is not supported');
+  }
   return {
-    host: env.API_HOST || '127.0.0.1',
+    host,
     port: port(env.API_PORT, 'API_PORT', 3100),
     corsOrigin,
     jwtSecret: env.AUTH_JWT_SECRET
