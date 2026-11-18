@@ -19,7 +19,11 @@ function respondWithError(error, res) {
 function handler(callback) {
   return async (req, res) => {
     try { await callback(req, res); }
-    catch (error) { respondWithError(error, res); }
+    catch (error) {
+      res.locals.operationOutcome = error instanceof WorkflowDomainError || error instanceof WorkflowInputError
+        ? error.code : 'SERVICE_UNAVAILABLE';
+      respondWithError(error, res);
+    }
   };
 }
 
