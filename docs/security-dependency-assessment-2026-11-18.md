@@ -12,6 +12,35 @@
 - There is no `.github/dependabot.yml` in the checked baseline; automatic Dependabot security-update availability is repository-setting dependent and was not independently verified by this inspection.
 - The existing CI workflow does not call `npm audit`; the new workflow is **diagnostic/report-only**. A green report-generation check means the assessment completed, **not** that the lockfile passed a security gate.
 
+## Live audit results (PR #23 diagnostic workflow)
+
+The [GitHub Actions assessment run](https://github.com/LEO0331/AssistantHub/actions/runs/44224628029) completed successfully against this unchanged dependency lockfile on November 18, 2026:
+
+| Scope | Critical | High | Moderate | Low | Total affected package names |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `npm audit --json --audit-level=low` | 0 | 39 | 4 | 0 | 43 |
+| `npm audit --json --audit-level=low --omit=dev` | 0 | 0 | 0 | 0 | 0 |
+
+**Interpretation:** The 43 entries are npm audit's affected package names, mostly transitive Jest/Vite dependents—not 43 independent security advisories. The audit's advisory link inventory contains **three distinct GHSA identifiers**. The production-only result indicates no npm-reported vulnerable dependencies when omitting dev dependencies; it does not establish that the deployed application and its build pipeline have no security risk.
+
+### Root-cause advisory inventory
+
+| Root package | Locked instances / versions | Reviewed GitHub advisory | Patched-version field | Scope |
+| --- | --- | --- | --- | --- |
+| `picomatch` | 24 instances: 23 × `4.0.7`, 1 × `2.3.2` | [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) — High, CVE-2026-112366 | **None** (as of Nov 18) | Dev only |
+| `glob` | 10 instances; affected `10.5.0`, `13.0.6` (unaffected `7.2.3` also present) | [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) — Moderate, CVE-2026-118773 | **14.0.2** | Dev only |
+| `minimatch` | 14 instances; affected `9.0.9`, `10.2.6` (unaffected `3.1.5` also present for this GHSA) | [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) — Moderate, CVE-2026-118764 | **11.0.1** | Dev only |
+
+The official GitHub-reviewed pages were checked on November 18, 2026. The patched-version fields for glob/minimatch are **advisory claims**, not a claim that this PR independently verified their npm registry release integrity or install compatibility.
+
+### Remediation feasibility and constraints
+
+- **Priority 1: picomatch** — no patched version is identified in the reviewed advisory. Do not imply `4.0.7` is patched and do not install an unverified fork, an arbitrary higher number, or a prerelease as a "fix." No safe upstream upgrade can be claimed today. Monitor upstream advisory and release evidence.
+- **Priority 2: glob/minimatch** — GitHub-reviewed advisories identify a patched major release, but the current versions are transitive under Jest and related tooling. Any changes must be evaluated with the existing real installation graph and tests in a **separate, scoped PR**. In particular, avoid blindly overriding every nested major version.
+- **Do not follow `npm audit fix --force` suggestions without investigation.** The npm report includes suggestions that would downgrade `jest` to `26.6.3` or `vite` to `6.2.7`; these are not evidence of an upstream `picomatch` fix and could regress the existing application/toolchain.
+- Production risk is currently lower than an unqualified "43 high issues" reading suggests, but build/CI availability risks remain. Require provenance and execution-path review before calling a reported finding non-exploitable.
+- An explicit, separately reviewed blocking audit gate can be proposed after classification and feasible remediation; a reporting job that finishes green is **not** a security policy pass.
+
 ## Immediate area to triage: picomatch (development-tooling)
 
 The checked `package-lock.json` contains **24 occurrences** of picomatch: 23 at version `4.0.7` and one at version `2.3.2`, all marked `dev: true` in the lockfile. They appear under Jest/Vite and related toolchain paths, not as top-level production dependencies.
