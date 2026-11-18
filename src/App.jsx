@@ -604,7 +604,7 @@ function App() {
                 <option value={TALENT_SOURCES.LOCAL}>Local generator</option>
                 <option value={TALENT_SOURCES.MOCK_API}>Mock API adapter</option>
                 <option value={TALENT_SOURCES.API} disabled={!readCandidateApiBaseUrl()}>
-                  {readCandidateApiBaseUrl() ? 'Real MySQL API (read-only)' : 'Real API (not configured)'}
+                  {readCandidateApiBaseUrl() ? 'Real MySQL API (authenticated workflow)' : 'Real API (not configured)'}
                 </option>
               </select>
             </div>

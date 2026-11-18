@@ -1,9 +1,10 @@
 /* eslint-disable react/prop-types */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AVAILABILITY_OPTIONS, TALENT_ROLES } from '../data/assistantFactory';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { fetchCandidatePage } from '../services/candidateApi';
 import CandidateApiSignIn from './CandidateApiSignIn';
+import CandidateWorkflowPanel from './CandidateWorkflowPanel';
 
 const PAGE_SIZES = [12, 24, 48, 96];
 const EMPTY = { items: [], total: 0, page: 1, pageSize: 12 };
@@ -11,6 +12,7 @@ const EMPTY = { items: [], total: 0, page: 1, pageSize: 12 };
 export default function CandidateApiBrowser({ baseUrl, onBack }) {
   const [session, setSession] = useState(null);
   const [sessionNotice, setSessionNotice] = useState('');
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('');
   const [availability, setAvailability] = useState('');
@@ -24,6 +26,12 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
   const [error, setError] = useState('');
   const debouncedQuery = useDebouncedValue(query.trim(), 180);
   const totalPages = Math.max(1, Math.ceil(result.total / pageSize));
+  const revokeSession = useCallback((notice = 'Session expired or access revoked. Please sign in again.') => {
+    setSession(null);
+    setSelectedCandidate(null);
+    setResult(EMPTY);
+    setSessionNotice(notice);
+  }, []);
 
   useEffect(() => {
     if (!baseUrl || !session?.accessToken) {
@@ -43,8 +51,7 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
       if (!active || err?.name === 'AbortError') return;
       if (err?.status === 401) {
         setResult(EMPTY);
-        setSession(null);
-        setSessionNotice('Session expired or access revoked. Please sign in again.');
+        revokeSession();
         setLoading(false);
         return;
       }
@@ -53,16 +60,17 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
       setLoading(false);
     });
     return () => { active = false; controller.abort(); };
-  }, [baseUrl, session?.accessToken, debouncedQuery, role, availability, rate, sort, page, pageSize, retry]);
+  }, [baseUrl, session?.accessToken, debouncedQuery, role, availability, rate, sort, page, pageSize, retry, revokeSession]);
 
   const change = (setter) => event => {
     setter(event.target.value);
     setPage(1);
+    setSelectedCandidate(null);
   };
 
   if (!session) {
     return <CandidateApiSignIn baseUrl={baseUrl} onBack={onBack} notice={sessionNotice}
-      onSuccess={value => { setSessionNotice(''); setSession(value); }} />;
+      onSuccess={value => { setSessionNotice(''); setSelectedCandidate(null); setSession(value); }} />;
   }
 
   return (
@@ -70,7 +78,7 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
       <header className="hero-shell">
         <p className="hero-title">AssistantHub · Database Candidate Browser</p>
         <p className="hero-subtitle">
-          Read-only synthetic records from MySQL. No real contacts, hiring decisions, or persistent shortlist actions.
+          Synthetic MySQL candidates with authenticated hiring workflow. Status changes and audit history are stored on the server.
         </p>
       </header>
       <main className="content-shell">
@@ -78,9 +86,9 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
           <div className="api-browser-actions">
             <button type="button" className="ui-button secondary" onClick={onBack}>Return to local demo</button>
             <button type="button" className="ui-button secondary"
-              onClick={() => { setSession(null); setResult(EMPTY); setSessionNotice(''); }}>Sign out of API</button>
+              onClick={() => { revokeSession(''); setSessionNotice(''); }}>Sign out of API</button>
             <span className="json-status">Signed in as {session.user.role}</span>
-            <span className="json-status">Data source: Express/MySQL API (read-only)</span>
+            <span className="json-status">Data source: Express/MySQL API (authenticated workflow)</span>
           </div>
           <div className="api-browser-filters">
             <label>
@@ -123,7 +131,7 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
             <label>
               Page size
               <select className="select-control" aria-label="API page size" value={pageSize}
-                onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>
+                onChange={event => { setPageSize(Number(event.target.value)); setPage(1); setSelectedCandidate(null); }}>
                 {PAGE_SIZES.map(value => <option key={value} value={value}>{value}</option>)}
               </select>
             </label>
@@ -146,15 +154,24 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
                     <p><strong>{candidate.role}</strong></p>
                     <p>{candidate.availability} · <span>$</span>{candidate.hourlyRateUsd}/hr</p>
                     <p>Skills: {candidate.skills.join(', ')}</p>
+                    <button type="button" className="ui-button secondary"
+                      onClick={() => setSelectedCandidate(candidate)}>
+                      View hiring workflow for {candidate.name}
+                    </button>
                   </article>
                 )}
               </div>
             }
+            {selectedCandidate && result.items.some(item => item.id === selectedCandidate.id) &&
+              <CandidateWorkflowPanel key={selectedCandidate.id}
+                candidate={selectedCandidate} baseUrl={baseUrl} accessToken={session.accessToken}
+                role={session.user.role} onClose={() => setSelectedCandidate(null)}
+                onUnauthorized={revokeSession} />}
             {result.total > pageSize && <nav className="pagination-bar" aria-label="API pagination">
               <button type="button" className="ui-button secondary" disabled={page === 1}
-                onClick={() => setPage(x => Math.max(1, x - 1))}>Previous API page</button>
+                onClick={() => { setSelectedCandidate(null); setPage(x => Math.max(1, x - 1)); }}>Previous API page</button>
               <button type="button" className="ui-button secondary" disabled={page >= totalPages}
-                onClick={() => setPage(x => Math.min(totalPages, x + 1))}>Next API page</button>
+                onClick={() => { setSelectedCandidate(null); setPage(x => Math.min(totalPages, x + 1)); }}>Next API page</button>
             </nav>}
           </>}
         </section>

@@ -10,3 +10,18 @@
 .api-signin-form { max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
 .api-signin-form label { font-size: 0.9rem; color: var(--text-secondary); }
 .api-signin-form button { align-self: flex-start; }
+
+.api-workflow-panel { margin-top: 22px; border: 1px solid var(--border-cream, #ddd); border-radius: 14px; background: var(--bg-ivory, #fff); padding: 20px; overflow-wrap: anywhere; }
+.api-workflow-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.api-workflow-heading h2 { margin: 0 0 8px; }
+.api-workflow-status { display: flex; gap: 12px 24px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; }
+.api-muted { font-size: 0.88rem; color: var(--text-secondary, #666); }
+.api-workflow-form { margin: 16px 0; max-width: 560px; display: flex; flex-direction: column; gap: 9px; }
+.api-workflow-form button { align-self: flex-start; }
+.api-workflow-audit { margin-top: 20px; }
+.api-audit-list { list-style-position: outside; padding-left: 24px; }
+.api-audit-list li { margin: 0 0 12px; padding: 10px; background: var(--bg-ivory, #fff); border: 1px solid #ddd; border-radius: 8px; }
+.api-audit-list li span { display: block; margin-top: 6px; overflow-wrap: anywhere; }
+.api-audit-request { font-size: 0.8rem; color: var(--text-secondary, #666); }
+.api-audit-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.api-workflow-warning { margin-top: 16px; padding: 12px; border: 1px solid #ae7b38; border-radius: 8px; }
