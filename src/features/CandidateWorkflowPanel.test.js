@@ -10,6 +10,7 @@ import {
 
 jest.mock('../services/workflowApi', () => ({
   ...jest.requireActual('../services/workflowApi'),
+  createIdempotencyKey: jest.fn(() => '01234567-89ab-4cde-8fab-0123456789ab'),
   fetchCandidateApplication: jest.fn(),
   fetchApplicationAudit: jest.fn(),
   postApplicationTransition: jest.fn()
@@ -76,7 +77,8 @@ describe('authenticated MySQL hiring workflow panel', () => {
     fireEvent.click(screen.getByText('Confirm server transition'));
     await waitFor(() => expect(postApplicationTransition).toHaveBeenCalledTimes(1));
     expect(postApplicationTransition).toHaveBeenCalledWith(expect.objectContaining({
-      applicationId: APP, toStatus: 'Contacted', expectedVersion: 1, reason: 'Reviewed'
+      applicationId: APP, toStatus: 'Contacted', expectedVersion: 1, reason: 'Reviewed',
+      idempotencyKey: '01234567-89ab-4cde-8fab-0123456789ab'
     }));
     await waitFor(() => expect(screen.getByText('New → Contacted')).toBeInTheDocument());
     expect(screen.getByText('Contacted')).toBeInTheDocument();
@@ -119,6 +121,51 @@ describe('authenticated MySQL hiring workflow panel', () => {
     fireEvent.click(screen.getByText('Refresh server state'));
     await waitFor(() => expect(fetchCandidateApplication).toHaveBeenCalledTimes(2));
     expect(postApplicationTransition).toHaveBeenCalledTimes(1);
+  });
+
+
+  test('manual safe retry uses the identical UUID key and payload after a lost response', async () => {
+    const next = { ...application, status: 'Contacted', version: 2 };
+    postApplicationTransition.mockRejectedValueOnce(
+      new Error('Cannot confirm the server outcome. Refresh application state before retrying.')
+    ).mockResolvedValueOnce({ application: next, auditEventId: EVENT, replayed: true });
+    fetchCandidateApplication.mockResolvedValueOnce(application).mockResolvedValueOnce(next);
+    fetchApplicationAudit.mockResolvedValueOnce(emptyAudit).mockResolvedValueOnce({
+      items: [entry], page: 1, pageSize: 10, total: 1
+    });
+    renderPanel('recruiter');
+    await screen.findByText('New');
+    fireEvent.change(screen.getByLabelText('Next status'), { target: { value: 'Contacted' } });
+    fireEvent.change(screen.getByLabelText(/Reason \(optional/), { target: { value: 'Reviewed' } });
+    fireEvent.click(screen.getByText('Confirm server transition'));
+    await screen.findByRole('alert');
+    expect(postApplicationTransition).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Retry same request safely')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Retry same request safely'));
+    await waitFor(() => expect(postApplicationTransition).toHaveBeenCalledTimes(2));
+    const first = postApplicationTransition.mock.calls[0][0];
+    const second = postApplicationTransition.mock.calls[1][0];
+    expect(second.idempotencyKey).toBe(first.idempotencyKey);
+    expect(second.expectedVersion).toBe(first.expectedVersion);
+    expect(second.toStatus).toBe(first.toStatus);
+    expect(second.reason).toBe(first.reason);
+    await screen.findByText('New → Contacted');
+    expect(screen.getByText(/Version:/)).toHaveTextContent('2');
+  });
+
+  test('refresh of unchanged state keeps the same-key retry available', async () => {
+    postApplicationTransition.mockRejectedValue(
+      new Error('Cannot confirm the server outcome. Refresh application state before retrying.')
+    );
+    renderPanel('admin');
+    await screen.findByText('New');
+    fireEvent.change(screen.getByLabelText('Next status'), { target: { value: 'Rejected' } });
+    fireEvent.click(screen.getByText('Confirm server transition'));
+    await screen.findByRole('alert');
+    fireEvent.click(screen.getByText('Refresh server state'));
+    await waitFor(() => expect(fetchCandidateApplication).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('Retry same request safely')).toBeInTheDocument();
+    expect(screen.getByText('Confirm server transition')).toBeDisabled();
   });
 
   test('401 or changed permissions revoke in-memory session through parent callback', async () => {

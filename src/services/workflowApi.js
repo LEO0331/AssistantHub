@@ -114,7 +114,9 @@ async function workflowRequest({ baseUrl, path, accessToken, method = 'GET', bod
   let data;
   try { data = await response.json(); }
   catch { throw new WorkflowApiError(null, 'Hiring workflow API returned invalid JSON. Refresh server state.'); }
-  return data;
+  return method === 'POST' ? {
+    ...data, replayed: response.headers?.get?.('Idempotency-Replayed') === 'true'
+  } : data;
 }
 
 export function allowedNextStatuses(status) {

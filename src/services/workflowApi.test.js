@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 import {
   fetchCandidateApplication, fetchApplicationAudit, postApplicationTransition,
-  allowedNextStatuses, WorkflowApiError
+  allowedNextStatuses, WorkflowApiError, createIdempotencyKey
 } from './workflowApi';
 
 const CAND = '00000000-0000-4000-8000-000000000001';
@@ -9,6 +9,7 @@ const APP = '00000000-0000-4000-8000-000000000101';
 const ACTOR = '00000000-0000-4000-8000-000000000301';
 const EVENT = '00000000-0000-4000-8000-000000000401';
 const TOKEN = 'a_test_only_bearer_token_xyz';
+const KEY = '01234567-89ab-4cde-8fab-0123456789ab';
 const baseUrl = 'https://api.example.test';
 const application = {
   id: APP, candidateId: CAND, status: 'New', version: 1,
@@ -62,7 +63,7 @@ describe('authenticated hiring workflow API client', () => {
       items: [event], page: 2, pageSize: 10, total: 11
     }));
     const result = await fetchApplicationAudit({
-      baseUrl, applicationId: APP, accessToken: TOKEN, page: 2, pageSize: 10, fetchImpl
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY, page: 2, pageSize: 10, fetchImpl
     });
     expect(result.total).toBe(11);
     expect(new URL(fetchImpl.mock.calls[0][0]).searchParams.get('page')).toBe('2');
@@ -70,10 +71,10 @@ describe('authenticated hiring workflow API client', () => {
       items: [{ ...event, applicationId: CAND }], page: 2, pageSize: 10, total: 11
     }));
     await expect(fetchApplicationAudit({
-      baseUrl, applicationId: APP, accessToken: TOKEN, page: 2, fetchImpl
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY, page: 2, fetchImpl
     })).rejects.toThrow(/history response is invalid/);
     await expect(fetchApplicationAudit({
-      baseUrl, applicationId: APP, accessToken: TOKEN, pageSize: 100, fetchImpl
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY, pageSize: 100, fetchImpl
     })).rejects.toThrow(/pagination/);
   });
 
@@ -83,7 +84,7 @@ describe('authenticated hiring workflow API client', () => {
       application: next, auditEventId: EVENT
     }));
     const result = await postApplicationTransition({
-      baseUrl, applicationId: APP, accessToken: TOKEN,
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
       toStatus: 'Contacted', expectedVersion: 1,
       reason: '  Review completed  ', fetchImpl
     });
@@ -92,6 +93,7 @@ describe('authenticated hiring workflow API client', () => {
     expect(url).toBe(baseUrl + '/api/applications/' + APP + '/transitions');
     expect(options.method).toBe('POST');
     expect(options.headers.Authorization).toBe('Bearer ' + TOKEN);
+    expect(options.headers['Idempotency-Key']).toBe(KEY);
     expect(JSON.parse(options.body)).toEqual({
       toStatus: 'Contacted', expectedVersion: 1, reason: 'Review completed'
     });
@@ -100,7 +102,7 @@ describe('authenticated hiring workflow API client', () => {
       application: { ...next, version: 1 }, auditEventId: EVENT
     }));
     await expect(postApplicationTransition({
-      baseUrl, applicationId: APP, accessToken: TOKEN,
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
       toStatus: 'Contacted', expectedVersion: 1, fetchImpl
     })).rejects.toThrow(/verify the transition response/);
   });
@@ -112,7 +114,7 @@ describe('authenticated hiring workflow API client', () => {
       });
       try {
         await postApplicationTransition({
-          baseUrl, applicationId: APP, accessToken: TOKEN,
+          baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
           toStatus: 'Contacted', expectedVersion: 1, fetchImpl
         });
         throw new Error('Expected rejection');
@@ -128,13 +130,13 @@ describe('authenticated hiring workflow API client', () => {
   test('network timeouts and invalid JSON are treated as unknown outcome, never auto retried', async () => {
     const fetchImpl = jest.fn().mockRejectedValue(new Error('db_password_connection_string'));
     await expect(postApplicationTransition({
-      baseUrl, applicationId: APP, accessToken: TOKEN,
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
       toStatus: 'Rejected', expectedVersion: 1, fetchImpl
     })).rejects.toThrow(/Cannot confirm the server outcome/);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     fetchImpl.mockResolvedValueOnce({ ok: true, json: async () => { throw new Error('bad json'); } });
     await expect(postApplicationTransition({
-      baseUrl, applicationId: APP, accessToken: TOKEN,
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
       toStatus: 'Rejected', expectedVersion: 1, fetchImpl
     })).rejects.toThrow(/invalid JSON/);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
@@ -147,18 +149,68 @@ describe('authenticated hiring workflow API client', () => {
       baseUrl, candidateId: CAND, accessToken: TOKEN, fetchImpl
     })).rejects.toMatchObject({ name: 'AbortError' });
     await expect(postApplicationTransition({
-      baseUrl, applicationId: APP, accessToken: TOKEN,
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
       toStatus: 'New', expectedVersion: 1, fetchImpl
     })).rejects.toThrow(/Invalid transition input/);
     await expect(postApplicationTransition({
-      baseUrl, applicationId: APP, accessToken: TOKEN,
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
       toStatus: 'Hired', expectedVersion: 0, fetchImpl
     })).rejects.toThrow(/Invalid transition input/);
     await expect(postApplicationTransition({
-      baseUrl, applicationId: APP, accessToken: TOKEN,
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
       toStatus: 'Hired', expectedVersion: 1, reason: 'x'.repeat(501), fetchImpl
     })).rejects.toThrow(/Invalid transition input/);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+
+  test('generates a secure random UUIDv4 and rejects missing crypto entropy', () => {
+    const source = { getRandomValues: jest.fn(bytes => {
+      bytes.set(Array.from({ length: bytes.length }, (_, i) => i));
+      return bytes;
+    }) };
+    expect(createIdempotencyKey(source)).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    );
+    expect(source.getRandomValues).toHaveBeenCalledTimes(1);
+    expect(() => createIdempotencyKey({})).toThrow(/Secure random/);
+  });
+
+  test('refuses a transition without a valid UUIDv4 key before calling fetch', async () => {
+    const fetchImpl = jest.fn();
+    await expect(postApplicationTransition({
+      baseUrl, applicationId: APP, accessToken: TOKEN,
+      toStatus: 'Contacted', expectedVersion: 1, fetchImpl
+    })).rejects.toThrow(/UUID-v4/);
+    await expect(postApplicationTransition({
+      baseUrl, applicationId: APP, accessToken: TOKEN,
+      idempotencyKey: 'not-a-key', toStatus: 'Contacted', expectedVersion: 1, fetchImpl
+    })).rejects.toThrow(/UUID-v4/);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test('honors replay headers and rejects reused keys with different payloads', async () => {
+    const fetchImpl = jest.fn().mockResolvedValueOnce({
+      ok: true, status: 200, headers: { get: key => key === 'Idempotency-Replayed' ? 'true' : null },
+      json: async () => ({
+        application: { ...application, status: 'Contacted', version: 2 },
+        auditEventId: EVENT
+      })
+    });
+    const reply = await postApplicationTransition({
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
+      toStatus: 'Contacted', expectedVersion: 1, fetchImpl
+    });
+    expect(reply.replayed).toBe(true);
+    fetchImpl.mockResolvedValueOnce({
+      ok: false, status: 409,
+      json: async () => ({ error: { code: 'IDEMPOTENCY_KEY_REUSED', message: 'unsafe echo secret' } })
+    });
+    await expect(postApplicationTransition({
+      baseUrl, applicationId: APP, accessToken: TOKEN, idempotencyKey: KEY,
+      toStatus: 'Contacted', expectedVersion: 1, fetchImpl
+    })).rejects.toThrow(/key was used for different request/);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   test('status transitions are a read-only UI hint; backend remains authority', () => {
