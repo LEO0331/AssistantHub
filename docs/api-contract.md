@@ -1,6 +1,6 @@
 # AssistantHub 2.0 — proposed REST API contract
 
-> **Draft only for PR #1.** None of these endpoints exists in the current static React application. This contract guides future implementation, testing and review; it does not confer backend functionality on the existing local/mock-api adapters.
+> **Partly implemented in PR #2:** Only GET /api/health/live and GET /api/health/ready exist in the isolated, not-yet-deployed Express backend. All authentication, candidate, application, and audit endpoints remain **planned**, not implemented. The current static React application still uses local/mock-api simulations.
 
 ## 1. Protocol and conventions
 
@@ -123,7 +123,7 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 - Server-generated, append-only business event history. Do not accept a public endpoint to edit or delete audit records.
 - Failure: 401/403/404 as appropriate. Do not expose password/token material or irrelevant personal data in event payloads.
 
-## 6. Operational endpoints
+## 6. Operational endpoints (implemented in isolated PR #2 backend; not deployed)
 
 - GET /api/health/live: process liveness; no secrets or infrastructure details.
 - GET /api/health/ready: service readiness, including DB connectivity; minimal success/failure response with no credentials exposed.
