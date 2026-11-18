@@ -36,7 +36,8 @@ test('readiness fails closed without leaking connection details or enabling publ
   assert.deepEqual(JSON.parse(body), { status: 'unavailable' });
   assert.doesNotMatch(body, /secret-db|password/);
   const blocked = await fetch(url + '/api/candidates');
-  assert.equal(blocked.status, 404);
+  assert.equal(blocked.status, 503);
+  assert.equal((await blocked.json()).error.code, 'SERVICE_UNAVAILABLE');
 });
 
 test('configuration requires explicit database credentials and rejects invalid ports', () => {

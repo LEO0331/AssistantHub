@@ -2,7 +2,6 @@ import { defineModels } from './models.mjs';
 
 // Synthetic, fixed records only: no applicant PII, network calls or random
 // identities. Stable IDs and findOrCreate make repeating the seed non-destructive.
-export const DEMO_COUNT = 6;
 const date = new Date('2026-01-01T00:00:00.000Z');
 const uuid = (value) => '00000000-0000-4000-8000-' + String(value).padStart(12, '0');
 
@@ -12,8 +11,17 @@ const people = [
   ['Demo Candidate 03', 'Executive Assistant', ['Inbox Triage', 'Calendar Management'], 'Available now', 50],
   ['Demo Candidate 04', 'Research Assistant', ['Data Research', 'Reporting'], 'Interviewing', 45],
   ['Demo Candidate 05', 'Operations Specialist', ['Operations', 'Documentation'], 'Available now', 55],
-  ['Demo Candidate 06', 'Customer Success Associate', ['CRM Operations', 'Client Onboarding'], 'Open next week', 30]
+  ['Demo Candidate 06', 'Customer Success Associate', ['CRM Operations', 'Client Onboarding'], 'Open next week', 30],
+  // Expand the disposable dataset enough to make server paging observable.
+  // Keep the original six seed rows unchanged for PR #2 compatibility.
+  ...Array.from({ length: 30 }, (_, index) => [
+    'Synthetic Candidate ' + String(index + 7).padStart(2, '0'),
+    'Operations Assistant', ['Documentation', 'Quality Checks'],
+    'Open next week', 40 + (index % 10)
+  ])
 ];
+
+export const DEMO_COUNT = people.length;
 
 export async function seedDatabase(sequelize) {
   const { Candidate, Application } = defineModels(sequelize);

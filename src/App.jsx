@@ -10,6 +10,9 @@ import { useDebouncedValue } from './hooks/useDebouncedValue';
 import { usePersistentState } from './hooks/usePersistentState';
 import { initialUiState, RATE_FILTERS, SORT_OPTIONS, uiReducer } from './state/uiReducer';
 import { loadTalentPool, TALENT_SOURCES } from './services/talentAdapter';
+import { readCandidateApiBaseUrl } from './services/candidateApi';
+import CandidateApiBrowser from './features/CandidateApiBrowser';
+import './features/CandidateApiBrowser.css';
 import './App.css';
 
 const Chatbot = lazy(() => import('./LazyChatbot'));
@@ -179,6 +182,11 @@ function App() {
   const debouncedSearchTerm = useDebouncedValue(uiState.searchTerm.trim().toLowerCase(), 180);
 
   useEffect(() => {
+    if (talentSource === TALENT_SOURCES.API) {
+      setAssistants([]);
+      dispatchUi({ type: 'setLoading', payload: false });
+      return undefined;
+    }
     let isMounted = true;
     dispatchUi({ type: 'setLoading', payload: true });
 
@@ -503,6 +511,10 @@ function App() {
     return <p className="empty-state">No profile cards to display.</p>;
   };
 
+  if (talentSource === TALENT_SOURCES.API) {
+    return <CandidateApiBrowser baseUrl={readCandidateApiBaseUrl()} onBack={() => setTalentSource(TALENT_SOURCES.LOCAL)} />;
+  }
+
   return (
     <div className="app-shell">
       <header className="hero-shell">
@@ -591,6 +603,9 @@ function App() {
               >
                 <option value={TALENT_SOURCES.LOCAL}>Local generator</option>
                 <option value={TALENT_SOURCES.MOCK_API}>Mock API adapter</option>
+                <option value={TALENT_SOURCES.API} disabled={!readCandidateApiBaseUrl()}>
+                  {readCandidateApiBaseUrl() ? 'Real MySQL API (read-only)' : 'Real API (not configured)'}
+                </option>
               </select>
             </div>
 

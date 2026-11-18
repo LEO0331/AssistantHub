@@ -6,14 +6,16 @@
 
 AssistantHub is a lightweight React talent-pool demo portal for discovering assistants, shortlisting talent, and progressing hire requests through a local pipeline.
 
-## AssistantHub 2.0 roadmap (design only)
+## AssistantHub 2.0 roadmap (incremental upgrade)
 
-An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The proposed system adds a separately hosted Express API, Sequelize/MySQL persistence, JWT authentication, server-side RBAC, version-based optimistic concurrency, and a transactional audit trail. **None of those backend features are implemented yet**; this site remains a client-only demo.
+An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The proposed system adds a separately hosted Express API, Sequelize/MySQL persistence, JWT authentication, server-side RBAC, version-based optimistic concurrency, and a transactional audit trail. **PR #2 implemented a locally runnable database foundation; PR #3 adds read-only synthetic candidate search/details and a separately configurable API browser.** Authentication, RBAC, hiring transitions and persistent audit events remain unimplemented; the public GitHub Pages demo still runs offline unless an API origin is explicitly configured.
 
 - [Architecture and phased rollout](docs/architecture-v2.md)
 - [Draft REST API contract and test scenarios](docs/api-contract.md)
 - PR #1: documentation and nonfunctional configuration cleanup only.
-- PRs #2–#5: API/database foundation, real candidate queries, authentication/authorization, transactional workflow and audit.
+- PR #2: isolated Express/MySQL foundation (complete).
+- PR #3: read-only synthetic candidate API, server search/paging and optional frontend browser.
+- PRs #4–#5: authentication/authorization, then transactional workflow and audit.
 - PR #6: integrate the real API workflow into React; first functional MVP.
 - PRs #7–#8: idempotency/failure handling and isolated public demo hardening.
 
@@ -21,7 +23,7 @@ Existing `local` and `mock-api` data sources remain browser simulations (the lat
 
 ## Highlights
 - Deterministic talent generation via `@faker-js/faker` (seed-controlled).
-- Data-source adapter switch (`local` / `mock-api`) for backend migration readiness.
+- Data-source options (`local` / `mock-api` / optional read-only `api`) for backend migration readiness.
 - Talent filters: role, availability, rate range, and text search.
 - One-page talent detail drawer (no routing, no backend).
 - Local hire status pipeline: `New -> Contacted -> Interview -> Hired`.
@@ -31,7 +33,7 @@ Existing `local` and `mock-api` data sources remain browser simulations (the lat
 
 ## AssistantHub 2.0 backend foundation
 
-The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records, and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed or connected to React**. Existing GitHub Pages and local/mock-api flows are unchanged. Authentication, candidate retrieval, RBAC, workflow transitions and audit endpoints are future PRs. See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
+The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The new optional read-only API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication, RBAC, workflow transitions and audit endpoints are future PRs. See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
 
 ## Tech Stack
 - React 18
@@ -42,13 +44,23 @@ The repository also contains an **isolated API foundation** in [api/](api/README
 - `@faker-js/faker`
 
 ## Local State Model
-There is currently no backend. State is client-side only:
+The existing offline demo retains client-side state; API mode reads a separate local MySQL backend only when configured:
 - `localStorage`: shortlist, seed
 - in-memory state: generated talent list, filters, inquiries, UI modal/drawer state
 
 ## Dependency security assessment
 
 The [November 18, 2026 dependency assessment](docs/security-dependency-assessment-2026-11-18.md) documents current audit findings and a separate report-only workflow. A successful diagnostic check does **not** certify a clean dependency tree; application CI/security gates are unchanged. The October 5 Dependabot review is historical.
+
+## Local MySQL API browser (PR #3)
+
+Start the [API foundation](api/README.md), migrate and seed the local MySQL database, and configure the frontend with a **public, nonsecret origin**:
+
+```sh
+VITE_ASSISTANTHUB_API_BASE_URL=http://127.0.0.1:3100 npm start
+```
+
+In the Data source selector choose **Real MySQL API (read-only)**. This mode performs **server-side** name/role/skills search, availability/rate filters, stable sorting and bounded pagination, with request cancellation and explicit failure/retry states. If the origin is unset, the API option is disabled; the existing demo remains offline. No frontend credentials are sent, no real personal data is served, and no persistence is claimed for local shortlist/hiring actions. The backend is not publicly deployed; do not expose unauthenticated endpoints with real candidate records. `API_CORS_ORIGIN` must be set to the precise frontend origin in the backend environment.
 
 ## Security & Demo Limitations
 - This is a client-only demo: all state can be modified in browser devtools and must not be treated as secure or authoritative.
