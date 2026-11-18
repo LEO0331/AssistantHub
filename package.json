@@ -24,7 +24,8 @@
         "test:coverage": "jest --runInBand --coverage",
         "test:ci": "jest --runInBand --coverage --watchAll=false",
         "preview": "vite preview",
-        "test:tooling": "node --test scripts/tooling.smoke.mjs"
+        "test:tooling": "node --test scripts/tooling.smoke.mjs",
+        "test:release": "node --test scripts/release-guard.check.mjs && node scripts/release-guard.mjs build"
     },
     "devDependencies": {
         "@babel/core": "^7.25.2",
