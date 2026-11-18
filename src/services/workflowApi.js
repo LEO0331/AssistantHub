@@ -123,7 +123,10 @@ export async function postApplicationTransition({ baseUrl, applicationId, access
   if (!Object.values(HIRING_TRANSITIONS).some(values => values.includes(toStatus)) ||
     !Number.isSafeInteger(expectedVersion) || expectedVersion < 1 ||
     expectedVersion > 4294967294 || typeof reason !== 'string' ||
-    reason.length > 500 || /[\u0000-\u001f\u007f]/.test(reason)) {
+    reason.length > 500 || [...reason].some(char => {
+      const code = char.charCodeAt(0);
+      return code < 32 || code === 127;
+    })) {
     throw new Error('Invalid transition input.');
   }
   const response = await workflowRequest({
