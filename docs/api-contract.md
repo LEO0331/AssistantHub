@@ -1,6 +1,6 @@
 # AssistantHub 2.0 — proposed REST API contract
 
-> **Partly implemented through PR #3:** The isolated backend now has GET /api/health/live, GET /api/health/ready, GET /api/candidates, and GET /api/candidates/:id for **synthetic-only, read-only discovery**. Authenticated candidate access, login, application transitions, audit history, and production deployment remain **planned**. Existing local/mock-api simulations still work.
+> **Partly implemented through PR #3:** The isolated backend now has GET /api/health/live, GET /api/health/ready, GET /api/candidates, and GET /api/candidates/:id for **synthetic-only, read-only discovery**. Authentication, application transitions and audit history are implemented in the **local API** through PR #5; a production deployment and frontend workflow integration remain **planned**. Existing local/mock-api simulations still work.
 
 ## 1. Protocol and conventions
 
@@ -72,7 +72,7 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 - Success 200: synthetic candidate detail with the same allowlisted fields as the list response.
 - Failure 404: record missing or unavailable to the caller.
 
-## 4. Application state
+## 4. Application state (server implemented in PR #5; React integration planned PR #6)
 
 ### GET /api/applications/:id
 - Auth: Viewer, Recruiter, Admin, subject to record access.
@@ -97,7 +97,7 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 - Errors: 400 invalid body; 401/403 access errors; 404 absent/inaccessible application; 409 stale expectedVersion; 422 transition outside the state machine.
 - Permitted: New -> Contacted/Rejected; Contacted -> Interview/Rejected; Interview -> Hired/Rejected. Hired and Rejected are terminal.
 - Atomicity: one conditional version/status update and one audit insert in the **same** DB transaction. On audit failure both must roll back. When one write loses a concurrency race, it creates no success event.
-- The proposed API does **not** promise exactly-once retries in PR #5. PR #7 introduces a persistent, actor-scoped Idempotency-Key contract with request-payload hashing, duplicate-result replay and mismatch rejection.
+- The implemented PR #5 API does **not** promise exactly-once retries in PR #5. PR #7 introduces a persistent, actor-scoped Idempotency-Key contract with request-payload hashing, duplicate-result replay and mismatch rejection.
 
 ~~~json
 {
@@ -120,7 +120,7 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 }
 ~~~
 
-## 5. Audit read model
+## 5. Audit read model (server implemented in PR #5)
 
 ### GET /api/applications/:id/audit-events
 - Auth: Viewer, Recruiter, Admin, subject to the same application access checks.
@@ -135,7 +135,7 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 - GET /api/health/ready: service readiness, including DB connectivity; minimal success/failure response with no credentials exposed.
 - Rate-limit and isolate health endpoints as appropriate for the deployment environment.
 
-## 7. Acceptance test matrix (future PRs)
+## 7. Acceptance test matrix (PR #5 has real MySQL integration tests; PR #7 idempotency is future)
 
 | Scenario | Expected result |
 | --- | --- |
@@ -153,6 +153,6 @@ Tests must exercise the real MySQL transaction/concurrency behavior and the HTTP
 
 ## 8. Adapter migration and compatibility
 
-Current source modes: local (seeded generation) and mock-api (delayed in-browser generation). Neither sends HTTP requests. Add api as a third **explicit** source in PR #3, retaining the same UI controls and existing offline modes. For API mode, use server pagination rather than generating thousands of records in the browser, cancel stale requests, and show actionable non-sensitive error messages.
+Current source modes: local (seeded generation) and mock-api (delayed in-browser generation). Neither sends HTTP requests. PR #3 added a separate API source and read-only browser, retaining original offline modes. For API mode, use server pagination rather than generating thousands of records in the browser, cancel stale requests, and show actionable non-sensitive error messages.
 
 Do not repurpose browser localStorage shortlist/status as authoritative API data. Until PR #6 ships, current local workflow remains client-only and unprotected. Separate API hosting and safe public-demo policy are described in [architecture-v2.md](architecture-v2.md).

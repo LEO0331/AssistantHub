@@ -8,7 +8,7 @@ AssistantHub is a lightweight React talent-pool demo portal for discovering assi
 
 ## AssistantHub 2.0 roadmap (incremental upgrade)
 
-An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The proposed system adds a separately hosted Express API, Sequelize/MySQL persistence, JWT authentication, server-side RBAC, version-based optimistic concurrency, and a transactional audit trail. **PR #2 implemented a locally runnable database foundation; PR #3 adds read-only synthetic candidate search/details and a separately configurable API browser.** Authentication, RBAC, hiring transitions and persistent audit events remain unimplemented; the public GitHub Pages demo still runs offline unless an API origin is explicitly configured.
+An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The proposed system adds a separately hosted Express API, Sequelize/MySQL persistence, JWT authentication, server-side RBAC, version-based optimistic concurrency, and a transactional audit trail. **PRs #2–#5 now implement an isolated Express/MySQL foundation, protected candidate discovery, JWT/RBAC, and version-checked hiring transitions with transactional audit events.** These backend workflows are not deployed and are not connected to hiring UI yet; the public GitHub Pages demo remains offline unless an API origin is explicitly configured.
 
 - [Architecture and phased rollout](docs/architecture-v2.md)
 - [Draft REST API contract and test scenarios](docs/api-contract.md)
@@ -16,7 +16,8 @@ An incremental upgrade to a **Hiring Workflow & Audit System** is planned. The p
 - PR #2: isolated Express/MySQL foundation (complete).
 - PR #3: read-only synthetic candidate API, server search/paging and optional frontend browser.
 - PR #4: JWT login, server-enforced RBAC, rate-limited authentication and in-memory API browser session.
-- PR #5: transactional hiring workflow and durable audit.
+- PR #5: transactional hiring workflow and durable MySQL audit (API-only).
+- PR #6: connect authenticated hiring status controls and audit timeline to React.
 - PR #6: integrate the real API workflow into React; first functional MVP.
 - PRs #7–#8: idempotency/failure handling and isolated public demo hardening.
 
@@ -34,7 +35,7 @@ Existing `local` and `mock-api` data sources remain browser simulations (the lat
 
 ## AssistantHub 2.0 backend foundation
 
-The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The new optional read-only API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication and role-protected candidate reads are included in PR #4. Hiring transitions and audit history remain future PRs. See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
+The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The new optional read-only API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication and role-protected candidate reads are included in PR #4. PR #5 adds server-side application transitions and audit history; **PR #6 will connect these to React**. For transaction and failure-mode details see [PR #5 workflow review](docs/workflow-audit-pr5.md). See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
 
 ## Tech Stack
 - React 18
