@@ -53,7 +53,7 @@ Errors use a sanitized `error.code` and `error.message` response; the correlatio
 {
   "items": [
     {
-      "id": "cand_demo_001",
+      "id": "00000000-0000-4000-8000-000000000001",
       "name": "Example Candidate",
       "role": "Project Coordinator",
       "availability": "Available now",
@@ -84,8 +84,8 @@ Errors use a sanitized `error.code` and `error.message` response; the correlatio
 
 ~~~json
 {
-  "id": "app_demo_001",
-  "candidateId": "cand_demo_001",
+  "id": "00000000-0000-4000-8000-000000000101",
+  "candidateId": "00000000-0000-4000-8000-000000000001",
   "status": "Interview",
   "version": 7,
   "updatedAt": "2026-11-18T00:00:00.000Z"
@@ -102,6 +102,16 @@ Errors use a sanitized `error.code` and `error.message` response; the correlatio
 - Atomicity: one conditional version/status update and one audit insert in the **same** DB transaction. On audit failure both must roll back. When one write loses a concurrency race, it creates no success event.
 - **PR #7 implemented:** Require a UUID-v4 `Idempotency-Key` header; unique key scoped to current authenticated actor. First successful 200 stores its exact JSON response atomically with transition and audit. Same actor/key/application/canonical payload returns stored 200 with `Idempotency-Replayed: true`; a different request with the same key returns `409 IDEMPOTENCY_KEY_REUSED`. Missing header returns 428; malformed returns 400. Seven-day retention is guaranteed only while records are retained; manual pruning allows future reuse.
 
+Example (synthetic UUIDs; issue a **fresh** UUID-v4 key for each new business attempt):
+
+~~~http
+POST /api/applications/00000000-0000-4000-8000-000000000101/transitions
+Authorization: Bearer <in-memory-access-token>
+Idempotency-Key: 0b0abda8-2cff-4874-9fe3-55f0cb784a41
+Content-Type: application/json
+~~~
+
+
 ~~~json
 {
   "toStatus": "Hired",
@@ -113,13 +123,13 @@ Errors use a sanitized `error.code` and `error.message` response; the correlatio
 ~~~json
 {
   "application": {
-    "id": "app_demo_001",
-    "candidateId": "cand_demo_001",
+    "id": "00000000-0000-4000-8000-000000000101",
+    "candidateId": "00000000-0000-4000-8000-000000000001",
     "status": "Hired",
     "version": 8,
     "updatedAt": "2026-11-18T00:00:10.000Z"
   },
-  "auditEventId": "audit_demo_001"
+  "auditEventId": "00000000-0000-4000-8000-000000000401"
 }
 ~~~
 
