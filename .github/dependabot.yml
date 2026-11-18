@@ -1,0 +1,21 @@
+# Separate dependency ecosystems: frontend, backend, and GitHub Actions.
+# Dependabot opens reviewable PRs; it does not auto-merge or dismiss alerts.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /api
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
