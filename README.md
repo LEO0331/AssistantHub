@@ -54,6 +54,10 @@ The existing offline demo retains client-side state; API mode reads a separate l
 
 The [PR #8 release and security decision](docs/release-readiness-pr8.md) distinguishes the **public offline GitHub Pages demo (allowed after review)** from the **local authenticated MySQL API (not approved for public hosting)**. API_HOST is loopback-only. CI validates dependency production high/critical gates, pinned GitHub Action commits, least-privilege workflows and the compiled Pages artifact. Root/npm, API/npm and Actions Dependabot updates are now scheduled weekly; warnings are reviewed, not auto-dismissed. To check a local production bundle, run `VITE_ASSISTANTHUB_API_BASE_URL="" npm run build && npm run test:release`.
 
+## React upgrade compatibility
+
+The React 18 + React DOM 18 runtime is retained until its React Leaflet and clipboard dependencies support React 19. Run `npm run test:react-stack` to validate the locked React dependency graph without bypassing peer checks. See [React major-version policy](docs/react-dependency-policy.md).
+
 ## Dependency security assessment
 
 The [November 18, 2026 dependency assessment](docs/security-dependency-assessment-2026-11-18.md) documents current audit findings and a separate report-only workflow. A successful diagnostic check does **not** certify a clean dependency tree; application CI/security gates are unchanged. The October 5 Dependabot review is historical.

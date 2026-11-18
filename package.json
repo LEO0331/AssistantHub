@@ -25,7 +25,8 @@
         "test:ci": "jest --runInBand --coverage --watchAll=false",
         "preview": "vite preview",
         "test:tooling": "node --test scripts/tooling.smoke.mjs",
-        "test:release": "node --test scripts/release-guard.check.mjs scripts/workflow-policy.check.mjs && node scripts/release-guard.mjs build"
+        "test:release": "node --test scripts/release-guard.check.mjs scripts/workflow-policy.check.mjs && node scripts/release-guard.mjs build",
+        "test:react-stack": "node --test scripts/verify-react-stack.check.mjs && node scripts/verify-react-stack.mjs"
     },
     "devDependencies": {
         "@babel/core": "^7.25.2",
