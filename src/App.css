@@ -252,7 +252,8 @@
 .talent-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
+  min-width: 1160px;
+  table-layout: fixed;
 }
 
 .talent-table th,
@@ -269,16 +270,44 @@
   font-family: 'Anthropic Serif', Georgia, serif;
   font-weight: 500;
   background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.table-cell-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.25rem;
 }
 
 .table-actions {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 6px;
+  white-space: nowrap;
+}
+
+.table-actions .ui-button {
+  min-height: 36px;
+  padding: 0 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.virtual-spacer td {
+  padding: 0;
+  border: 0;
+  font-size: 0;
+  line-height: 0;
 }
 
 .table-viewport {
-  overflow-x: auto;
+  overflow: auto;
 }
 
 .profile-card {

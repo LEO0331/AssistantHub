@@ -51,13 +51,31 @@ describe('App integration', () => {
   test('runs one-click demo scenario preset', async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByText('Run Demo Scenario'));
+    fireEvent.click(screen.getByText('Load Sample Demo'));
 
     await waitFor(() => {
       expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
       expect(screen.getByLabelText('Deterministic seed')).toHaveValue(424242);
       expect(screen.getByLabelText('Data source')).toHaveValue('mock-api');
-      expect(screen.getByText(/Demo scenario loaded/i)).toBeInTheDocument();
+      expect(screen.getByText(/Sample demo loaded/i)).toBeInTheDocument();
+    });
+  });
+
+  test('sample demo is optional and warns that it clears local demo records', async () => {
+    render(<App />);
+    const button = screen.getByRole('button', { name: 'Load Sample Demo' });
+    expect(button).toHaveAttribute('title', expect.stringMatching(/clears your current local shortlist and inquiries/i));
+    expect(screen.getByText(/Talent Pool Size \(6 generated\)/)).toBeInTheDocument();
+
+    await waitFor(() => expect(screen.getAllByText('Shortlist').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('Shortlist')[0]);
+    expect(JSON.parse(localStorage.getItem('talentShortlist'))).toHaveLength(1);
+
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(screen.getByText(/Sample demo loaded: 500 fictional profiles/i)).toBeInTheDocument();
+      expect(JSON.parse(localStorage.getItem('talentShortlist'))).toHaveLength(0);
+      expect(screen.getByLabelText('Data source')).toHaveValue('mock-api');
     });
   });
 
@@ -69,7 +87,7 @@ describe('App integration', () => {
       expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
       expect(screen.getByLabelText('Deterministic seed')).toHaveValue(424242);
       expect(screen.getByLabelText('Data source')).toHaveValue('mock-api');
-      expect(screen.getByText('Demo scenario loaded from URL preset.')).toBeInTheDocument();
+      expect(screen.getByText('Sample demo loaded from URL preset.')).toBeInTheDocument();
     });
 
     window.history.pushState({}, '', '/');
@@ -79,7 +97,7 @@ describe('App integration', () => {
     render(<App />);
     expect(screen.queryByText('Demo Checklist')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Presenter checklist' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText('Run Demo Scenario'));
+    fireEvent.click(screen.getByText('Load Sample Demo'));
     await waitFor(() => {
       expect(screen.getByText(/Talent Pool Size \(500 generated\)/)).toBeInTheDocument();
     });
@@ -169,8 +187,71 @@ describe('App integration', () => {
 
     fireEvent.click(screen.getByText('List Mode'));
 
-    expect(screen.getAllByRole('table').length).toBeGreaterThan(1);
+    // One semantic table keeps the sticky headers and virtual rows aligned.
+    expect(screen.getAllByRole('table')).toHaveLength(1);
+    expect(screen.getAllByRole('columnheader')).toHaveLength(7);
+    const groups = screen.getAllByRole('group', { name: /^Actions for / });
+    expect(groups.length).toBeGreaterThan(0);
+    expect(groups.length).toBeLessThan(25);
+    for (const group of groups) {
+      expect(within(group).getByRole('button', { name: 'Like' })).toBeInTheDocument();
+      expect(within(group).getByRole('button', { name: 'Shortlist' })).toBeInTheDocument();
+      expect(within(group).getByRole('button', { name: 'Detail' })).toBeInTheDocument();
+    }
     expect(screen.getByText('Card Mode')).toBeInTheDocument();
+  });
+
+  test('virtualized list keeps bounded rows and resets scroll when sorting or changing views', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Load 500' }));
+    await waitFor(() => expect(screen.getByText(/Showing 24 of 500 talents/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'List Mode' }));
+
+    const viewport = document.querySelector('.table-viewport');
+    expect(viewport).not.toBeNull();
+    const initialRows = screen.getAllByRole('group', { name: /^Actions for / });
+    expect(initialRows.length).toBeLessThan(25);
+    fireEvent.scroll(viewport, { target: { scrollTop: 1800 } });
+    expect(viewport.scrollTop).toBe(1800);
+    const newRows = screen.getAllByRole('group', { name: /^Actions for / });
+    expect(newRows.length).toBeLessThan(25);
+    expect(newRows[0].getAttribute('aria-label')).not.toBe(initialRows[0].getAttribute('aria-label'));
+
+    fireEvent.change(screen.getByLabelText('Sort by likes'), { target: { value: 'lowToHigh' } });
+    expect(viewport.scrollTop).toBe(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Card Mode' }));
+    fireEvent.click(screen.getByRole('button', { name: 'List Mode' }));
+    expect(document.querySelector('.table-viewport').scrollTop).toBe(0);
+    expect(screen.getAllByRole('group', { name: /^Actions for / }).length).toBeLessThan(25);
+  });
+
+  test('list mode aligns actions inside rows and preserves like, shortlist and detail controls', async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByText(/Showing 6 of 6 talents/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'List Mode' }));
+
+    const table = screen.getByRole('table');
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers.map((header) => header.textContent)).toEqual([
+      'Name', 'Role', 'Availability', 'Rate', 'Likes', 'Status', 'Actions',
+    ]);
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(7); // header + six data rows; no duplicate table header
+    const first = rows[1];
+    expect(first).toHaveStyle({ height: '72px' });
+    expect(within(first).getAllByRole('cell')).toHaveLength(7);
+    const actions = within(first).getByRole('group', { name: /^Actions for / });
+    expect(actions.parentElement.tagName).toBe('TD');
+    expect(actions.parentElement).toBe(within(first).getAllByRole('cell')[6]);
+
+    const firstLikes = within(first).getAllByRole('cell')[4].textContent;
+    fireEvent.click(within(actions).getByRole('button', { name: 'Like' }));
+    expect(within(first).getAllByRole('cell')[4]).toHaveTextContent(String(Number(firstLikes) + 1));
+
+    fireEvent.click(within(actions).getByRole('button', { name: 'Shortlist' }));
+    expect(within(actions).getByRole('button', { name: 'Shortlisted' })).toBeInTheDocument();
+    fireEvent.click(within(actions).getByRole('button', { name: 'Detail' }));
+    expect(screen.getByRole('dialog', { name: 'Talent detail drawer' })).toBeInTheDocument();
   });
 
   test('opens help modal with usage instructions', async () => {
