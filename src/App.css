@@ -47,17 +47,92 @@
   letter-spacing: 0.12px;
 }
 
+/* Separate pool configuration from browsing so every field shares a label baseline. */
+.pool-setup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.control-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.control-field .panel-label {
+  margin-bottom: 8px;
+  line-height: 20px;
+}
+
+.pool-size-input-row {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pool-size-input-row > .input-control {
+  min-width: 0;
+  flex: 1;
+}
+
+.pool-stepper {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pool-stepper .ui-button {
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
+}
+
+.pool-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pool-presets .ui-button {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  white-space: nowrap;
+}
+
+.pool-setup-grid .input-control,
+.pool-setup-grid .select-control,
+.talent-discovery-grid .input-control,
+.talent-discovery-grid .select-control {
+  box-sizing: border-box;
+  height: 44px;
+  min-height: 44px;
+}
+
+.field-hint {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.talent-discovery-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: end;
+  margin-top: 18px;
+}
+
 .controls-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   align-items: center;
-}
-
-.seed-control {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  margin-top: 16px;
 }
 
 .search-shell {
@@ -631,6 +706,14 @@
 }
 
 @media (max-width: 991px) {
+  .pool-setup-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pool-size-control {
+    grid-column: 1 / -1;
+  }
+
   .controls-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -641,16 +724,19 @@
 }
 
 @media (max-width: 640px) {
+  .pool-setup-grid,
+  .talent-discovery-grid,
   .controls-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .button-row {
-    width: 100%;
+  .pool-size-control {
+    grid-column: auto;
   }
 
-  .button-row .ui-button {
-    flex: 1;
+  .pool-stepper .ui-button {
+    width: 40px;
+    min-width: 40px;
   }
 
   .input-control.search-input {
