@@ -180,6 +180,7 @@ function App() {
   const [viewMode, setViewMode] = useState('cards');
   const [tableScrollTop, setTableScrollTop] = useState(0);
   const importInputRef = useRef(null);
+  const tableViewportRef = useRef(null);
   const didApplyUrlDemoRef = useRef(false);
   const debouncedSearchTerm = useDebouncedValue(uiState.searchTerm.trim().toLowerCase(), 180);
 
@@ -375,8 +376,9 @@ function App() {
   };
 
   useEffect(() => {
-      setCurrentPage(1);
-      setTableScrollTop(0);
+    setCurrentPage(1);
+    setTableScrollTop(0);
+    if (tableViewportRef.current) tableViewportRef.current.scrollTop = 0;
   }, [
     uiState.searchTerm,
     uiState.selectedRole,
@@ -648,7 +650,10 @@ function App() {
             </button>
             <button
               className="ui-button secondary"
-              onClick={() => setViewMode((previous) => (previous === 'cards' ? 'table' : 'cards'))}
+              onClick={() => {
+                setViewMode((previous) => (previous === 'cards' ? 'table' : 'cards'));
+                setTableScrollTop(0);
+              }}
             >
               {viewMode === 'cards' ? 'List Mode' : 'Card Mode'}
             </button>
@@ -751,6 +756,7 @@ function App() {
               <div className="table-shell">
                 <div
                   className="table-viewport"
+                  ref={tableViewportRef}
                   style={{ maxHeight: `${TABLE_VIEWPORT_HEIGHT}px` }}
                   onScroll={(event) => setTableScrollTop(event.currentTarget.scrollTop)}
                 >

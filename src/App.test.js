@@ -201,6 +201,30 @@ describe('App integration', () => {
     expect(screen.getByText('Card Mode')).toBeInTheDocument();
   });
 
+  test('virtualized list keeps bounded rows and resets scroll when sorting or changing views', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Load 500' }));
+    await waitFor(() => expect(screen.getByText(/Showing 24 of 500 talents/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'List Mode' }));
+
+    const viewport = document.querySelector('.table-viewport');
+    expect(viewport).not.toBeNull();
+    const initialRows = screen.getAllByRole('group', { name: /^Actions for / });
+    expect(initialRows.length).toBeLessThan(25);
+    fireEvent.scroll(viewport, { target: { scrollTop: 1800 } });
+    expect(viewport.scrollTop).toBe(1800);
+    const newRows = screen.getAllByRole('group', { name: /^Actions for / });
+    expect(newRows.length).toBeLessThan(25);
+    expect(newRows[0].getAttribute('aria-label')).not.toBe(initialRows[0].getAttribute('aria-label'));
+
+    fireEvent.change(screen.getByLabelText('Sort by likes'), { target: { value: 'lowToHigh' } });
+    expect(viewport.scrollTop).toBe(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Card Mode' }));
+    fireEvent.click(screen.getByRole('button', { name: 'List Mode' }));
+    expect(document.querySelector('.table-viewport').scrollTop).toBe(0);
+    expect(screen.getAllByRole('group', { name: /^Actions for / }).length).toBeLessThan(25);
+  });
+
   test('list mode aligns actions inside rows and preserves like, shortlist and detail controls', async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText(/Showing 6 of 6 talents/)).toBeInTheDocument());
