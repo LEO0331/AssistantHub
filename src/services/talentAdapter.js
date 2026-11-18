@@ -3,6 +3,7 @@ import { generateAssistants } from '../data/assistantFactory';
 export const TALENT_SOURCES = {
   LOCAL: 'local',
   MOCK_API: 'mock-api',
+  API: 'api',
 };
 
 const adapters = {
@@ -16,6 +17,9 @@ const adapters = {
 };
 
 export const loadTalentPool = async ({ count, seed, source = TALENT_SOURCES.LOCAL }) => {
+  if (source === TALENT_SOURCES.API) {
+    throw new Error('Use fetchCandidatePage for server-paginated API data');
+  }
   const adapter = adapters[source] || adapters[TALENT_SOURCES.LOCAL];
   return adapter({ count, seed });
 };

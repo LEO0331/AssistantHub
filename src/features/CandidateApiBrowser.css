@@ -1,0 +1,8 @@
+.api-browser-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.api-browser-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.api-browser-filters label { font-size: 0.9rem; color: var(--text-secondary); }
+.api-browser-filters input, .api-browser-filters select { margin-top: 6px; }
+.api-candidate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.api-candidate { border: 1px solid var(--border-cream); background: var(--bg-ivory); border-radius: var(--radius-lg); padding: 18px; }
+.api-candidate h2 { font-size: 1.18rem; margin: 0 0 8px; }
+.api-candidate p { margin: 6px 0; overflow-wrap: anywhere; }
