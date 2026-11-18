@@ -33,7 +33,7 @@ Existing `local` and `mock-api` data sources remain browser simulations (the lat
 
 ## AssistantHub 2.0 backend foundation
 
-The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records, and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The new optional read-only API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication, RBAC, workflow transitions and audit endpoints are future PRs. See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
+The repository also contains an **isolated API foundation** in [api/](api/README.md): Express 5, Sequelize 6, MySQL 8.4 schema migrations, repeatable synthetic seed records (36 candidates in PR #3), and `/api/health/live` and `/api/health/ready` endpoints. This backend is **not deployed**. The new optional read-only API browser can call it when `VITE_ASSISTANTHUB_API_BASE_URL` is configured; the default GitHub Pages and local/mock-api flows remain unchanged. Authentication, RBAC, workflow transitions and audit endpoints are future PRs. See [architecture](docs/architecture-v2.md) and [draft API contract](docs/api-contract.md).
 
 ## Tech Stack
 - React 18

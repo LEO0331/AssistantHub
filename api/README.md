@@ -41,7 +41,7 @@ To run database-backed tests locally (use only a disposable database), set NODE_
 - The first migration intentionally has NO automatic destructive down migration.
 - Umzug is a migration-time **devDependency**: CI installs it for migration and seed setup. The runtime-only production package installation (`npm ci --omit=dev`) does not include Umzug; deployment must execute migrations as a separately provisioned release job before installing/deploying runtime-only dependencies.
 - **MySQL DDL is not transactionally atomic across tables.** An interrupted fresh migration may leave a partial schema even without a SequelizeMeta entry; investigate and restore backup (production) or recreate a disposable database (development) before retrying.
-- Synthetic seed inserts six stable records and six New applications, with no real personal data or test users/passwords. It uses findOrCreate rather than overwriting an existing hiring state.
+- Synthetic seed inserts 36 stable records and 36 New applications, with no real personal data or test users/passwords. It uses findOrCreate rather than overwriting an existing hiring state.
 - API database credentials are required through environment variables; no default production password. Docker Compose passwords are clearly local-only and must not be reused outside a developer machine.
 - A green /ready response tests connectivity, not that all schema migrations were applied. Run migrations as a separate deployment step.
 

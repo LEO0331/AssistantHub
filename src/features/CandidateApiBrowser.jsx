@@ -76,6 +76,7 @@ export default function CandidateApiBrowser({ baseUrl, onBack }) {
               <select className="select-control" aria-label="API role" value={role} onChange={change(setRole)}>
                 <option value="">All roles</option>
                 {TALENT_ROLES.map(value => <option key={value} value={value}>{value}</option>)}
+                <option value="Operations Assistant">Operations Assistant (synthetic seed)</option>
               </select>
             </label>
             <label>

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { createApp } from '../src/app.mjs';
 import { databaseConfig } from '../src/config.mjs';
 import { createSequelize } from '../src/db/connection.mjs';
+import { DEMO_COUNT } from '../src/db/seed.mjs';
 
 async function serve(t, corsOrigin = '') {
   assert.equal(process.env.NODE_ENV, 'test', 'Use disposable test DB only');
@@ -27,7 +28,7 @@ test('paginated candidate search is stable, bounded, and PII-minimal on real MyS
   const { get } = await serve(t);
   const first = await get('/api/candidates?page=1&pageSize=2&sort=rateDesc');
   assert.equal(first.status, 200);
-  assert.equal(first.body.total, 6);
+  assert.equal(first.body.total, DEMO_COUNT);
   assert.equal(first.body.page, 1);
   assert.equal(first.body.pageSize, 2);
   assert.equal(first.body.items.length, 2);
@@ -38,6 +39,7 @@ test('paginated candidate search is stable, bounded, and PII-minimal on real MyS
   const second = await get('/api/candidates?page=2&pageSize=2&sort=rateDesc');
   assert.equal(second.body.items.length, 2);
   assert.equal(second.body.total, first.body.total);
+  assert.ok(second.body.total > 12, 'the default UI page size must show pagination');
   assert.equal(new Set([...first.body.items, ...second.body.items].map(x => x.id)).size, 4);
   const repeat = await get('/api/candidates?page=1&pageSize=2&sort=rateDesc');
   assert.deepEqual(repeat.body.items, first.body.items);
