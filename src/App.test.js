@@ -373,4 +373,38 @@ describe('App integration', () => {
     });
     jest.useRealTimers();
   });
+
+  test('switches to configured server candidate browser and returns to local demo', async () => {
+    const meta = document.createElement('meta');
+    meta.setAttribute('name', 'assistanthub-api-base-url');
+    meta.setAttribute('content', 'http://127.0.0.1:3100');
+    document.head.appendChild(meta);
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        items: [{
+          id: '00000000-0000-4000-8000-000000000001',
+          name: 'Demo Candidate 01',
+          role: 'Project Coordinator',
+          availability: 'Available now',
+          skills: ['Scheduling'],
+          hourlyRateUsd: 40
+        }],
+        page: 1, pageSize: 12, total: 1
+      })
+    });
+    try {
+      render(<App />);
+      fireEvent.change(screen.getByLabelText('Data source'), { target: { value: 'api' } });
+      await waitFor(() => expect(screen.getByText('Demo Candidate 01')).toBeInTheDocument());
+      expect(screen.getByText(/read-only synthetic records/i)).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Return to local demo'));
+      await waitFor(() => expect(screen.getByLabelText('Data source')).toHaveValue('local'));
+    } finally {
+      meta.remove();
+      global.fetch = originalFetch;
+    }
+  });
+
 });

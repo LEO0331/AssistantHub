@@ -1,6 +1,6 @@
 # AssistantHub 2.0 — proposed REST API contract
 
-> **Partly implemented in PR #2:** Only GET /api/health/live and GET /api/health/ready exist in the isolated, not-yet-deployed Express backend. All authentication, candidate, application, and audit endpoints remain **planned**, not implemented. The current static React application still uses local/mock-api simulations.
+> **Partly implemented through PR #3:** The isolated backend now has GET /api/health/live, GET /api/health/ready, GET /api/candidates, and GET /api/candidates/:id for **synthetic-only, read-only discovery**. Authenticated candidate access, login, application transitions, audit history, and production deployment remain **planned**. Existing local/mock-api simulations still work.
 
 ## 1. Protocol and conventions
 
@@ -36,11 +36,11 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 - Hash and verify passwords server-side. Do not support public signup or place credentials in the static demo bundle.
 - Refresh/logout/session-revocation policy must be explicitly decided in PR #4 before a public authenticated service is released.
 
-## 3. Candidate discovery
+## 3. Candidate discovery (read-only synthetic implementation in PR #3; RBAC planned for PR #4)
 
 ### GET /api/candidates
-- Auth: Viewer, Recruiter, Admin for protected mode. A public synthetic read-only view may be introduced separately and must not leak contact details.
-- Optional query: q, role, availability, sort, page (>= 1), pageSize (bounded).
+- **Current PR #3:** Unauthenticated access to synthetic-only summary fields (id, name, role, skills, availability, hourlyRateUsd). No contact details or personal data. **Planned PR #4:** Viewer/Recruiter/Admin protected access.
+- Optional query: q (max 100 characters; matches name, role, and skills), role, availability, rate (all, under40, 40to60, over60), sort (nameAsc, rateAsc, rateDesc), page (1–1000), pageSize (1–96). Unknown or malformed query parameters return 400.
 - Success 200: { items: [candidateSummary], page, pageSize, total }.
 - Sort keys must be allowlisted; SQL parameters must be bound, not concatenated.
 
@@ -62,8 +62,8 @@ Exact validation error details and request IDs may be refined during PR #2. Neve
 ~~~
 
 ### GET /api/candidates/:id
-- Auth: Viewer, Recruiter, Admin, subject to resource access.
-- Success 200: candidateDetail, using an allowlisted response schema.
+- **Current PR #3:** Unauthenticated synthetic-only response; RBAC to follow in PR #4.
+- Success 200: synthetic candidate detail with the same allowlisted fields as the list response.
 - Failure 404: record missing or unavailable to the caller.
 
 ## 4. Application state

@@ -1,6 +1,6 @@
 # AssistantHub 2.0 — proposed architecture
 
-> PR #1 proposed the architecture. PR #2 adds an isolated, not-yet-deployed Express/MySQL foundation (schema migrations, synthetic seeds, and two health endpoints). The current GitHub Pages app remains frontend-only. No authentication, candidate API, authorization, hiring transitions, or durable audit-write/read API is implemented yet.
+> PR #1 proposed the architecture. PR #2 adds an isolated Express/MySQL foundation. PR #3 adds read-only synthetic candidate list/detail endpoints and an optional, separately configured server-paginated React browser. Default GitHub Pages remains an offline demo; the backend is not deployed. No authentication, authorization, hiring transitions, or durable audit-write/read API is implemented yet.
 
 ## 1. Purpose and boundaries
 
@@ -100,7 +100,7 @@ Two recruiters read application version 7 at Interview. Recruiter A requests Hir
 
 1. Preserve existing React route/base path and local/mock-api behavior.
 2. PR #2: introduce isolated Express/MySQL backend without frontend consumer changes; add migrations, synthetic seeds, two health checks, HTTP and real-MySQL integration tests.
-3. PR #3: add **new** api adapter to talentAdapter, not a covert rename of mock-api. Add pagination, validation, AbortController cancellation, loading/error states; keep local/mock explicitly selectable.
+3. PR #3: add an **explicit** API source and separate read-only candidate browser (no fake contact fields), server pagination/filtering, response validation, AbortController cancellation, loading/error/retry states; keep local/mock modes unchanged.
 4. PR #4: add authenticated API sessions and server-side authorization; do not rely on hidden UI controls.
 5. PR #5: implement transactional state transitions and audit API.
 6. PR #6: integrate workflow controls and audit timeline into React; remove duplicate business authority from browser for API mode.
