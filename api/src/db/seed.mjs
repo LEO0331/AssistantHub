@@ -11,7 +11,7 @@ const people = [
   ['Demo Candidate 03', 'Executive Assistant', ['Inbox Triage', 'Calendar Management'], 'Available now', 50],
   ['Demo Candidate 04', 'Research Assistant', ['Data Research', 'Reporting'], 'Interviewing', 45],
   ['Demo Candidate 05', 'Operations Specialist', ['Operations', 'Documentation'], 'Available now', 55],
-  ['Demo Candidate 06', 'Customer Success Associate', ['CRM Operations', 'Client Onboarding'], 'Open next week', 30]
+  ['Demo Candidate 06', 'Customer Success Associate', ['CRM Operations', 'Client Onboarding'], 'Open next week', 30],
   // Expand the disposable dataset enough to make server paging observable.
   // Keep the original six seed rows unchanged for PR #2 compatibility.
   ...Array.from({ length: 30 }, (_, index) => [
