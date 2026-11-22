@@ -39,7 +39,7 @@
         "babel-jest": "^30.5.2",
         "eslint": "^8.57.0",
         "eslint-plugin-react": "^7.35.0",
-        "globals": "^15.9.0",
+        "globals": "^17.14.0",
         "identity-obj-proxy": "^3.0.0",
         "jest": "^30.5.2",
         "vite": "^8.3.5",
