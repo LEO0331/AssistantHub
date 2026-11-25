@@ -7,6 +7,23 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # These tightly coupled runtime/toolchain majors need an intentional
+    # migration PR (React peers, Babel presets, supported Node and tests).
+    # Only major version-update PRs are deferred; patch/minor and security
+    # updates remain enabled, and CI production audits remain mandatory.
+    ignore:
+      - dependency-name: react
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-dom
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-leaflet
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@babel/core"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@babel/preset-env"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@babel/preset-react"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /api

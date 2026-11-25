@@ -49,7 +49,7 @@ export function verifyReactStack(manifest, lock) {
       name + ' installed version is outside the manifest version range');
   }
   assert.deepEqual(resolved.react, resolved['react-dom'],
-    'react and react-dom must resolve to the same version. Do not upgrade react-dom alone.');
+    'react and react-dom must resolve to the same version. Upgrade them together with compatible integrations.');
 
   const peers = [
     'react-dom',
