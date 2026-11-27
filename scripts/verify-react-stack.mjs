@@ -16,6 +16,16 @@ function acceptsPeer(range, version) {
   if (range === '*') return true;
   return String(range || '').split('||').some(alternative => {
     const entry = alternative.trim();
+    // A standalone inclusive minimum has no upper bound.
+    const lowerBound = /^>=\s*(\d+)\.(\d+)\.(\d+)$/.exec(entry);
+    if (lowerBound) {
+      const minimum = lowerBound.slice(1).map(Number);
+      for (let index = 0; index < 3; index += 1) {
+        if (version[index] > minimum[index]) return true;
+        if (version[index] < minimum[index]) return false;
+      }
+      return true;
+    }
     const match = /^(\^|~)?(\d+)(?:\.(\d+))?(?:\.(\d+))?$/.exec(entry);
     if (!match) return false;
     const [, operator, major, minor, patch] = match;
