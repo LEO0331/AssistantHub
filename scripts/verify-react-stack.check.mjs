@@ -28,6 +28,27 @@ test('the isolated supported-stack fixture passes', () => {
   assert.deepEqual(verifyReactStack(manifest, lock), { react: '18.3.1', reactDom: '18.3.1' });
 });
 
+test('accepts an inclusive minimum peer range from clipboard 5.1.1', () => {
+  const changed = clone(lock);
+  changed.packages['node_modules/react-copy-to-clipboard'] = {
+    version: '5.1.1', peerDependencies: { react: '>=15.3.0' }
+  };
+  assert.deepEqual(verifyReactStack(manifest, changed),
+    { react: '18.3.1', reactDom: '18.3.1' });
+  changed.packages['node_modules/react-copy-to-clipboard'].peerDependencies.react = '>=18.3.1';
+  assert.equal(verifyReactStack(manifest, changed).react, '18.3.1');
+});
+
+test('rejects a peer minimum above the resolved React version', () => {
+  const changed = clone(lock);
+  const clipboard = changed.packages['node_modules/react-copy-to-clipboard'];
+  for (const range of ['>=18.3.2', '>=18.4.0', '>=19.0.0']) {
+    clipboard.peerDependencies.react = range;
+    assert.throws(() => verifyReactStack(manifest, changed),
+      /react-copy-to-clipboard requires react@/);
+  }
+});
+
 test('a React 19-only bump is rejected before npm ci', () => {
   const changedManifest = clone(manifest);
   const changedLock = clone(lock);
