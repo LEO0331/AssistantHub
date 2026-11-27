@@ -24,6 +24,12 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@babel/preset-react"
         update-types: ["version-update:semver-major"]
+      # ESLint and its recommended rules must advance together only when
+      # eslint-plugin-react supports the new major. Keep routine updates enabled.
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /api
